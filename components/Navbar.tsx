@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Menu, X, Search, Bell, User } from 'lucide-react';
 
-const categories = ['All', 'Movies', 'TV', 'New', 'Popular', 'Kids', 'Live', 'Shows', 'Music'];
+const categories = ['All', 'Movies', 'Popular'];
 
 export const Navbar: React.FC = () => {
   const router = useRouter();
@@ -15,7 +15,11 @@ export const Navbar: React.FC = () => {
   const handleCategoryClick = (category: string) => {
     setActiveCategory(category);
     setIsOpen(false);
-    console.log('[v0] Category selected:', category);
+    if (category === 'All') {
+      router.push('/');
+    } else {
+      router.push(`/?category=${category}`);
+    }
   };
 
   return (
@@ -33,11 +37,10 @@ export const Navbar: React.FC = () => {
             <button
               key={category}
               onClick={() => handleCategoryClick(category)}
-              className={`w-full text-left px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                activeCategory === category
-                  ? 'bg-[#2d5a5a] text-white'
-                  : 'hover:bg-[#2d5a5a] text-white/80'
-              }`}
+              className={`w-full text-left px-4 py-2 rounded-lg transition-colors text-sm font-medium ${activeCategory === category
+                ? 'bg-[#2d5a5a] text-white'
+                : 'hover:bg-[#2d5a5a] text-white/80'
+                }`}
             >
               {category}
             </button>
@@ -45,7 +48,7 @@ export const Navbar: React.FC = () => {
         </div>
 
         <div className="border-t border-[#2d5a5a] pt-4">
-          <button 
+          <button
             onClick={() => console.log('[v0] Settings clicked')}
             className="w-full text-left px-4 py-2 rounded-lg hover:bg-[#2d5a5a] transition-colors text-sm font-medium"
           >
@@ -82,11 +85,10 @@ export const Navbar: React.FC = () => {
               <button
                 key={category}
                 onClick={() => handleCategoryClick(category)}
-                className={`w-full text-left px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                  activeCategory === category
-                    ? 'bg-[#2d5a5a] text-white'
-                    : 'hover:bg-gray-100'
-                }`}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-colors text-sm font-medium ${activeCategory === category
+                  ? 'bg-[#2d5a5a] text-white'
+                  : 'hover:bg-gray-100'
+                  }`}
               >
                 {category}
               </button>

@@ -1,10 +1,7 @@
-const API_KEY = process.env.NEXT_PUBLIC_OMDB_API_KEY;
-const BASE_URL = 'http://www.omdbapi.com';
-const POSTER_URL = 'http://img.omdbapi.com';
+const API_KEY = process.env.NEXT_PUBLIC_OMDB_API_KEY; // Kept to avoid env errors, but unused internally
+const BASE_URL = 'https://api.2embed.cc';
 
-if (!API_KEY) {
-  console.error('[v0] OMDb API key is not configured. Please add NEXT_PUBLIC_OMDB_API_KEY to your environment.');
-}
+// No OMDB key block warning anymore since 2embed doesn't require it
 
 export interface Movie {
   imdbID: string;
@@ -49,14 +46,20 @@ export interface SearchResult {
 // Cache to minimize API calls
 const cache: { [key: string]: any } = {};
 
-export async function searchMovies(query: string): Promise<SearchResult> {
-  if (!API_KEY) {
-    console.error('[v0] Cannot search: API key not configured');
-    return { Search: [], totalResults: '0', Response: 'False', Error: 'API key not configured' };
-  }
+// Helper to map 2embed movie to our existing Movie/Search format
+const mapToMovie = (item: any) => {
+  return {
+    imdbID: item.imdb_id || item.tmdb_id?.toString() || '',
+    Title: item.title || item.name || '',
+    Year: item.year || item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4) || '',
+    Poster: item.poster || 'N/A',
+    Type: item.title ? 'movie' : 'series',
+  };
+};
 
-  const cacheKey = `search-${query}`;
-  
+export async function searchMovies(query: string, page: number = 1): Promise<SearchResult> {
+  const cacheKey = `search-${query}-${page}`;
+
   if (cache[cacheKey]) {
     console.log('[v0] Using cached results for:', query);
     return cache[cacheKey];
@@ -64,20 +67,24 @@ export async function searchMovies(query: string): Promise<SearchResult> {
 
   try {
     console.log('[v0] Searching for:', query);
-    const url = `${BASE_URL}/?apikey=${API_KEY}&s=${encodeURIComponent(query)}&type=movie`;
-    console.log('[v0] API URL:', url.replace(API_KEY, '[REDACTED]'));
-    
+    // 2embed has separate endpoints for movie/tv. We'll default to search for movies
+    const url = `/api/proxy?endpoint=search&q=${encodeURIComponent(query)}&page=${page}`;
+
     const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch');
     const data = await response.json();
-    
-    console.log('[v0] API Response:', { response: data.Response, results: data.Search?.length || 0 });
-    
-    if (data.Response === 'True' && data.Search) {
-      cache[cacheKey] = data;
-      return data;
+
+    if (data.results && data.results.length > 0) {
+      const validResults = data.results.filter((item: any) => item.poster && item.poster !== 'N/A');
+      const mappedSearch = {
+        Search: validResults.map(mapToMovie),
+        totalResults: data.total_results?.toString() || validResults.length.toString(),
+        Response: 'True'
+      };
+      cache[cacheKey] = mappedSearch;
+      return mappedSearch;
     } else {
-      console.error('[v0] API Error:', data.Error);
-      return { Search: [], totalResults: '0', Response: 'False', Error: data.Error };
+      return { Search: [], totalResults: '0', Response: 'False', Error: 'Movie not found!' };
     }
   } catch (error) {
     console.error('[v0] Search error:', error);
@@ -85,14 +92,39 @@ export async function searchMovies(query: string): Promise<SearchResult> {
   }
 }
 
-export async function getMovieDetails(imdbID: string): Promise<Movie | null> {
-  if (!API_KEY) {
-    console.error('[v0] Cannot fetch details: API key not configured');
-    return null;
+export async function getTrendingMovies(timeWindow: 'day' | 'week' | 'month' = 'week', page: number = 1): Promise<SearchResult> {
+  const cacheKey = `trending-${timeWindow}-${page}`;
+
+  if (cache[cacheKey]) {
+    return cache[cacheKey];
   }
 
+  try {
+    const url = `/api/proxy?endpoint=trending&time_window=${timeWindow}&page=${page}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch');
+    const data = await response.json();
+
+    if (data.results && data.results.length > 0) {
+      const validResults = data.results.filter((item: any) => item.poster && item.poster !== 'N/A');
+      const mappedSearch = {
+        Search: validResults.map(mapToMovie),
+        totalResults: data.total_results?.toString() || validResults.length.toString(),
+        Response: 'True'
+      };
+      cache[cacheKey] = mappedSearch;
+      return mappedSearch;
+    }
+    return { Search: [], totalResults: '0', Response: 'False', Error: 'No trending movies found!' };
+  } catch (error) {
+    console.error('[v0] Trending error:', error);
+    return { Search: [], totalResults: '0', Response: 'False', Error: 'Network error' };
+  }
+}
+
+export async function getMovieDetails(imdbID: string): Promise<Movie | null> {
   const cacheKey = `movie-${imdbID}`;
-  
+
   if (cache[cacheKey]) {
     console.log('[v0] Using cached details for:', imdbID);
     return cache[cacheKey];
@@ -100,20 +132,40 @@ export async function getMovieDetails(imdbID: string): Promise<Movie | null> {
 
   try {
     console.log('[v0] Fetching details for:', imdbID);
-    const response = await fetch(
-      `${BASE_URL}/?apikey=${API_KEY}&i=${imdbID}&plot=full`
-    );
+    const response = await fetch(`/api/proxy?endpoint=movie&imdb_id=${imdbID}`);
+    if (!response.ok) throw new Error('Failed to fetch details');
     const data = await response.json();
-    
-    console.log('[v0] Details response:', data.Response);
-    
-    if (data.Response === 'True') {
-      cache[cacheKey] = data;
-      return data;
-    } else {
-      console.error('[v0] Details error:', data.Error);
-      return null;
+
+    if (data && data.title) {
+      const mappedMovie: Movie = {
+        imdbID: data.imdb_id || imdbID,
+        Title: data.title,
+        Year: data.year || data.release_date?.substring(0, 4) || 'N/A',
+        Rated: data.certification || 'N/A',
+        Released: data.release_date || 'N/A',
+        Runtime: data.runtime ? `${data.runtime} min` : 'N/A',
+        Genre: data.genres?.join(', ') || 'N/A',
+        Director: data.cast_crew?.crew?.find((c: any) => c.job === 'Director')?.name || 'N/A',
+        Writer: data.cast_crew?.crew?.find((c: any) => c.department === 'Writing')?.name || 'N/A',
+        Actors: data.cast_crew?.cast?.slice(0, 4).map((c: any) => c.name).join(', ') || 'N/A',
+        Plot: data.plot || data.overview || 'N/A',
+        Language: data.original_language || 'N/A',
+        Country: data.production_countries?.join(', ') || 'N/A',
+        Awards: 'N/A', // Not provided by 2embed
+        Poster: data.poster || 'N/A',
+        Ratings: [{ Source: 'TMDB', Value: `${data.vote_average}/10` }],
+        Metascore: 'N/A',
+        imdbRating: data.vote_average?.toString() || 'N/A',
+        imdbVotes: data.vote_count?.toString() || 'N/A',
+        Type: 'movie',
+        Response: 'True'
+      };
+
+      cache[cacheKey] = mappedMovie;
+      return mappedMovie;
     }
+
+    return null;
   } catch (error) {
     console.error('[v0] Details fetch error:', error);
     return null;

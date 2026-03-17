@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { SearchBar } from '@/components/SearchBar';
 import { MovieCard } from '@/components/MovieCard';
 import { MoviesCarousel } from '@/components/MoviesCarousel';
 import { StatsPanel } from '@/components/StatsPanel';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
-import { searchMovies, Movie } from '@/lib/api';
+import { searchMovies, getTrendingMovies, getMovieDetails, Movie } from '@/lib/api';
 import { animatePageIn, animateCardsStagger } from '@/lib/animations';
 import { useWatchlist } from '@/lib/WatchlistContext';
 
@@ -22,48 +24,50 @@ interface SearchMovie {
 export default function Home() {
   const { watchlist, addToWatchlist } = useWatchlist();
   const [featuredMovie, setFeaturedMovie] = useState<Movie | null>(null);
+  const [prevMovie, setPrevMovie] = useState<Movie | null>(null);
+  const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]);
+  const [featuredIndex, setFeaturedIndex] = useState(0);
+  const [isSliding, setIsSliding] = useState(false);
   const [popularMovies, setPopularMovies] = useState<SearchMovie[]>([]);
+  const [actionMovies, setActionMovies] = useState<SearchMovie[]>([]);
+  const [trendingMovies, setTrendingMovies] = useState<SearchMovie[]>([]);
+  const [scifiMovies, setScifiMovies] = useState<SearchMovie[]>([]);
   const [searchResults, setSearchResults] = useState<SearchMovie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const category = searchParams.get('category') || 'All';
 
   // Load initial popular movies on mount
   useEffect(() => {
     const loadPopularMovies = async () => {
       try {
         console.log('[v0] Loading popular movies...');
-        // Fetch popular movies
-        const results = await searchMovies('Batman');
-        console.log('[v0] Popular movies loaded:', results.Search?.length || 0);
-        if (results.Search && results.Search.length > 0) {
-          setPopularMovies(results.Search.slice(0, 8));
-          // Set the first movie as featured
-          if (results.Search[0]) {
-            console.log('[v0] Setting featured movie:', results.Search[0].Title);
-            setFeaturedMovie({
-              imdbID: results.Search[0].imdbID,
-              Title: results.Search[0].Title,
-              Year: results.Search[0].Year,
-              Poster: results.Search[0].Poster,
-              imdbRating: '8.0',
-              Runtime: '2h 5m',
-              Released: results.Search[0].Year,
-              Rated: 'PG-13',
-              Genre: 'Action, Crime, Drama',
-              Director: 'Christopher Nolan',
-              Writer: 'Jonathan Nolan',
-              Actors: 'Christian Bale, Michael Caine',
-              Plot: 'A vigilante with a mission to clean up crime-ridden streets.',
-              Language: 'English',
-              Country: 'USA',
-              Awards: 'Multiple Awards',
-              Ratings: [{ Source: 'IMDb', Value: '8.0/10' }],
-              Metascore: '82',
-              imdbVotes: '2,500,000',
-              Type: 'movie',
-              Response: 'True',
-            } as Movie);
+        const [popularRes, actionRes, trendingRes, scifiRes] = await Promise.all([
+          getTrendingMovies('day', 1),
+          getTrendingMovies('week', 1),
+          getTrendingMovies('month', 1),
+          searchMovies('Sci-Fi')
+        ]);
+
+        if (popularRes.Search) setPopularMovies(popularRes.Search.slice(0, 12));
+        if (actionRes.Search) setActionMovies(actionRes.Search.slice(0, 12));
+        if (trendingRes.Search) setTrendingMovies(trendingRes.Search.slice(0, 12));
+        if (scifiRes.Search) setScifiMovies(scifiRes.Search.slice(0, 12));
+
+        const featuredBase = popularRes.Search?.[0] || actionRes.Search?.[0] || trendingRes.Search?.[0];
+        if (featuredBase) {
+          console.log('[v0] Fetching details for featured movie:', featuredBase.Title);
+          // Fetch details for top 5 in parallel for the rotating banner
+          const topCandidates = popularRes.Search?.slice(0, 5) || [];
+          const detailResults = await Promise.all(
+            topCandidates.map((m: SearchMovie) => getMovieDetails(m.imdbID))
+          );
+          const validFeatured = detailResults.filter(Boolean) as Movie[];
+          if (validFeatured.length > 0) {
+            setFeaturedMovies(validFeatured);
+            setFeaturedMovie(validFeatured[0]);
           }
         } else {
           console.error('[v0] No search results received');
@@ -75,8 +79,68 @@ export default function Home() {
       }
     };
 
-    loadPopularMovies();
-  }, []);
+    const loadCategoryMovies = async (cat: string) => {
+      setIsLoading(true);
+      try {
+        console.log(`[v0] Loading category: ${cat}`);
+        if (cat === 'Movies') {
+          // Fetch multiple pages of movies to show "everything available"
+          const [page1, page2, page3] = await Promise.all([
+            getTrendingMovies('week', 1),
+            getTrendingMovies('week', 2),
+            getTrendingMovies('week', 3)
+          ]);
+
+          const allMovies = [
+            ...(page1.Search || []),
+            ...(page2.Search || []),
+            ...(page3.Search || [])
+          ].filter(m => m.Type === 'movie');
+
+          setPopularMovies(allMovies);
+          setActionMovies([]);
+          setScifiMovies([]);
+          setTrendingMovies([]);
+        } else if (cat === 'Popular') {
+          const [popularRes, new2025, new2026] = await Promise.all([
+            getTrendingMovies('day', 1),
+            searchMovies('2025'),
+            searchMovies('2026')
+          ]);
+          if (popularRes.Search) setPopularMovies(popularRes.Search.slice(0, 16));
+          if (new2025.Search || new2026.Search) {
+            setActionMovies([...(new2025.Search || []), ...(new2026.Search || [])].slice(0, 16));
+          }
+          setScifiMovies([]);
+          setTrendingMovies([]);
+        }
+
+        // Pick featured movie for category page (use fresh results not stale state)
+        let featuredCandidate: any = null;
+        if (cat === 'Movies') {
+          const r = await getTrendingMovies('week', 1);
+          featuredCandidate = r.Search?.find(m => m.Type === 'movie') || r.Search?.[0];
+        } else if (cat === 'Popular') {
+          const r = await getTrendingMovies('day', 1);
+          featuredCandidate = r.Search?.[0];
+        }
+        if (featuredCandidate) {
+          const details = await getMovieDetails(featuredCandidate.imdbID);
+          setFeaturedMovie(details || featuredCandidate as Movie);
+        }
+      } catch (error) {
+        console.error(`[v0] Failed to load ${cat}:`, error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (category === 'All') {
+      loadPopularMovies();
+    } else {
+      loadCategoryMovies(category);
+    }
+  }, [category]);
 
   // Animate page in when loaded
   useEffect(() => {
@@ -84,6 +148,21 @@ export default function Home() {
       animatePageIn(containerRef.current);
     }
   }, [isLoading]);
+
+  // Auto-rotate banner every 3.5 seconds — conveyor belt style
+  useEffect(() => {
+    if (featuredMovies.length < 2) return;
+    const interval = setInterval(() => {
+      setIsSliding(true);
+      setTimeout(() => {
+        const nextIndex = (featuredIndex + 1) % featuredMovies.length;
+        setFeaturedIndex(nextIndex);
+        setFeaturedMovie(featuredMovies[nextIndex]);
+        setIsSliding(false);
+      }, 850); // wait for animation to finish before swapping
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [featuredMovies, featuredIndex]);
 
   const handleSearch = async (query: string) => {
     setIsLoading(true);
@@ -120,60 +199,74 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-4 md:p-8">
           {/* Left Section - Featured and Carousel */}
           <div className="lg:col-span-3 space-y-8">
-            {/* Featured Movie */}
-            {!hasSearched && (
+            {/* Featured Movie — Conveyor Belt Slider */}
+            {!hasSearched && category === 'All' && (
               <>
                 {isLoading ? (
                   <SkeletonLoader type="featured" />
-                ) : featuredMovie ? (
-                  <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#1a3a3a] to-[#2d5a5a] text-white h-96 md:h-96 flex items-center">
-                    {featuredMovie.Poster && featuredMovie.Poster !== 'N/A' && (
+                ) : featuredMovies.length > 0 ? (() => {
+                  const curr = featuredMovies[featuredIndex];
+                  const next = featuredMovies[(featuredIndex + 1) % featuredMovies.length];
+                  return (
+                    <div className="relative rounded-2xl overflow-hidden" style={{ height: '24rem' }}>
+                      {/* Double-wide flex track — slides left to reveal next */}
                       <div
-                        className="absolute inset-0 opacity-30"
                         style={{
-                          backgroundImage: `url('${featuredMovie.Poster}')`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
+                          display: 'flex',
+                          width: '200%',
+                          height: '100%',
+                          transform: isSliding ? 'translateX(-50%)' : 'translateX(0)',
+                          transition: isSliding
+                            ? 'transform 0.85s cubic-bezier(0.77, 0, 0.18, 1)'
+                            : 'none',
                         }}
-                      />
-                    )}
-                    <div className="relative z-10 max-w-xl p-6 md:p-12">
-                      <h1 className="text-4xl md:text-5xl font-bold mb-4 text-balance">{featuredMovie.Title}</h1>
-                      <div className="flex flex-wrap gap-4 mb-6 text-sm">
-                        <span className="flex items-center gap-2">
-                          <span className="text-yellow-300">★</span>
-                          {featuredMovie.imdbRating || 'N/A'}
-                        </span>
-                        <span>{featuredMovie.Runtime || 'N/A'}</span>
-                        <span>{featuredMovie.Released ? new Date(featuredMovie.Released).getFullYear() : 'N/A'}</span>
-                      </div>
-                      <p className="text-sm md:text-base leading-relaxed mb-6 line-clamp-3">{featuredMovie.Plot}</p>
-                      <div className="flex flex-wrap gap-3">
-                        <button 
-                          onClick={() => console.log('[v0] Watch Now clicked for:', featuredMovie.Title)}
-                          className="px-6 py-3 bg-white text-[#1a3a3a] rounded-lg font-semibold hover:bg-gray-200 transition-colors"
-                        >
-                          Watch Now
-                        </button>
-                        <button 
-                          onClick={() => {
-                            addToWatchlist({
-                              imdbID: featuredMovie.imdbID,
-                              title: featuredMovie.Title,
-                              poster: featuredMovie.Poster,
-                              year: featuredMovie.Released || featuredMovie.Year,
-                              type: 'movie',
-                            });
-                            console.log('[v0] Added to watchlist:', featuredMovie.Title);
-                          }}
-                          className="px-6 py-3 border-2 border-white rounded-lg font-semibold hover:bg-white/10 transition-colors"
-                        >
-                          Add to List
-                        </button>
+                      >
+                        {[curr, next].map((movie, i) => movie && (
+                          <div key={`${movie.imdbID}-${i}`} style={{ width: '50%', flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            {/* Poster background */}
+                            {movie.Poster && movie.Poster !== 'N/A' && (
+                              <div style={{
+                                position: 'absolute', inset: 0,
+                                backgroundImage: `url('${movie.Poster}')`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                filter: 'brightness(0.38)',
+                              }} />
+                            )}
+                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(26,58,58,0.85) 0%, transparent 60%)' }} />
+                            {/* Content */}
+                            <div className="relative z-10 text-white max-w-xl" style={{ padding: '2rem 3rem' }}>
+                              <h1 className="text-4xl md:text-5xl font-bold mb-3 leading-tight">{movie.Title}</h1>
+                              <div className="flex gap-4 mb-3 text-sm opacity-90">
+                                <span>⭐ {movie.imdbRating || 'N/A'}</span>
+                                <span>{movie.Runtime || ''}</span>
+                                <span>{movie.Released ? new Date(movie.Released).getFullYear() : movie.Year || ''}</span>
+                              </div>
+                              <p className="text-sm leading-relaxed mb-5 line-clamp-2 opacity-75">{movie.Plot}</p>
+                              {i === 0 && (
+                                <div className="flex flex-wrap gap-3 mb-4">
+                                  <Link href={`/movie/${movie.imdbID}`} className="px-6 py-2.5 bg-white text-[#1a3a3a] rounded-lg font-semibold hover:bg-gray-100 transition-colors text-sm">▶ Watch Now</Link>
+                                  <button onClick={() => addToWatchlist({ imdbID: movie.imdbID, title: movie.Title, poster: movie.Poster, year: movie.Released || movie.Year, type: 'movie' })} className="px-6 py-2.5 border-2 border-white/70 text-white rounded-lg font-semibold hover:bg-white/10 transition-colors text-sm">+ Add to List</button>
+                                </div>
+                              )}
+                              {i === 0 && featuredMovies.length > 1 && (
+                                <div className="flex gap-2">
+                                  {featuredMovies.map((_, di) => (
+                                    <button
+                                      key={di}
+                                      onClick={() => { if (!isSliding) { setFeaturedIndex(di); } }}
+                                      style={{ width: di === featuredIndex ? '24px' : '8px', height: '8px', borderRadius: '9999px', background: di === featuredIndex ? 'white' : 'rgba(255,255,255,0.35)', transition: 'all 0.3s ease' }}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                ) : null}
+                  );
+                })() : null}
               </>
             )}
 
@@ -209,14 +302,34 @@ export default function Home() {
                 {isLoading ? (
                   <SkeletonLoader type="carousel" />
                 ) : popularMovies.length > 0 ? (
-                  <MoviesCarousel title="Popular Movies" movies={popularMovies} />
+                  category === 'Movies' ? (
+                    <div className="space-y-6">
+                      <h2 className="text-2xl font-bold text-gray-800">Available Movies</h2>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+                        {popularMovies.map((movie) => (
+                          <div key={movie.imdbID} className="transform hover:scale-105 transition-transform duration-300">
+                            <MovieCard
+                              imdbID={movie.imdbID}
+                              title={movie.Title}
+                              poster={movie.Poster}
+                              year={movie.Year}
+                              rating={movie.imdbRating}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <MoviesCarousel title={category === 'All' ? "Popular Now" : `${category}`} movies={popularMovies} />
+                  )
                 ) : null}
 
-                {/* Additional Carousels */}
-                {!isLoading && popularMovies.length > 0 && (
+                {/* Additional Carousels (Only for All/Popular) */}
+                {!isLoading && category !== 'Movies' && (
                   <>
-                    <MoviesCarousel title="Action Movies" movies={popularMovies.slice(0, 6)} />
-                    <MoviesCarousel title="Trending Now" movies={[...popularMovies].reverse().slice(0, 6)} />
+                    {actionMovies.length > 0 && <MoviesCarousel title={category === 'All' ? "Trending This Week" : "More Like This"} movies={actionMovies} />}
+                    {scifiMovies.length > 0 && <MoviesCarousel title={category === 'All' ? "Sci-Fi & Fantasy" : "Featured Suggestions"} movies={scifiMovies} />}
+                    {trendingMovies.length > 0 && <MoviesCarousel title="Trending This Month" movies={trendingMovies} />}
                   </>
                 )}
               </>
@@ -225,7 +338,7 @@ export default function Home() {
 
           {/* Right Section - Stats Panel */}
           <StatsPanel
-            watchTime="130"
+            watchTime={`${Math.max(12, watchlist.length * 2.5)}h`}
             wishList={watchlist.length}
             subscription="Pro"
             comments={12}

@@ -6,7 +6,7 @@ import { Navbar } from '@/components/Navbar';
 import { MovieDetails } from '@/components/MovieDetails';
 import { getMovieDetails, Movie } from '@/lib/api';
 import { animatePageIn } from '@/lib/animations';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Play } from 'lucide-react';
 
 interface MoviePageProps {
   params: Promise<{
@@ -120,6 +120,20 @@ export default function MoviePage({ params }: MoviePageProps) {
             imdbRating={movie.imdbRating}
             imdbVotes={movie.imdbVotes}
           />
+
+          {/* Video Player Section */}
+          <div className="mt-8 bg-black rounded-lg overflow-hidden shadow-xl aspect-video relative">
+            <iframe
+              title="Movie Player"
+              src={`https://www.2embed.cc/embed/${movie.imdbID}`}
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              scrolling="no"
+              allowFullScreen
+              className="absolute inset-0"
+            />
+          </div>
 
           {/* Related Info Section */}
           {movie.Language && (

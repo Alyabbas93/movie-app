@@ -35,7 +35,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ imdbID, title, poster, yea
   const handleWatchlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (inWatchlist) {
       removeFromWatchlist(imdbID);
       setInWatchlist(false);
@@ -76,7 +76,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ imdbID, title, poster, yea
               <span className="text-gray-400 text-sm">No Image</span>
             </div>
           )}
-          
+
           {/* Watchlist Button */}
           <button
             onClick={handleWatchlistToggle}
