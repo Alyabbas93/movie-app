@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
-import { ServiceWorkerRegistration } from './ServiceWorkerRegistration'
 import { WatchlistProvider } from '@/lib/WatchlistContext'
+import { ThemeProvider } from '@/lib/ThemeContext'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -45,13 +45,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <WatchlistProvider>
-          {children}
-          <Analytics />
-          <ServiceWorkerRegistration />
-        </WatchlistProvider>
+        <ThemeProvider>
+          <WatchlistProvider>
+            {children}
+            <Analytics />
+          </WatchlistProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

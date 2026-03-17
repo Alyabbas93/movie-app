@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { SearchBar } from '@/components/SearchBar';
@@ -34,88 +34,124 @@ export default function Home() {
   const [scifiMovies, setScifiMovies] = useState<SearchMovie[]>([]);
   const [searchResults, setSearchResults] = useState<SearchMovie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMoreLoading, setIsMoreLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const category = searchParams.get('category') || 'All';
 
-  // Load initial popular movies on mount
-  useEffect(() => {
-    const loadPopularMovies = async () => {
-      try {
-        console.log('[v0] Loading popular movies...');
-        const [popularRes, actionRes, trendingRes, scifiRes] = await Promise.all([
-          getTrendingMovies('day', 1),
-          getTrendingMovies('week', 1),
-          getTrendingMovies('month', 1),
-          searchMovies('Sci-Fi')
-        ]);
+  // Load more function
+  const loadMore = () => {
+    if (!isLoading && hasMore) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
 
-        if (popularRes.Search) setPopularMovies(popularRes.Search.slice(0, 12));
-        if (actionRes.Search) setActionMovies(actionRes.Search.slice(0, 12));
-        if (trendingRes.Search) setTrendingMovies(trendingRes.Search.slice(0, 12));
-        if (scifiRes.Search) setScifiMovies(scifiRes.Search.slice(0, 12));
+  const loadPopularMovies = async () => {
+    if (window.location.pathname !== '/') return;
+    setIsLoading(true);
+    try {
+      console.log('[v0] Loading popular movies...');
+      const [popularRes, actionRes, trendingRes, scifiRes] = await Promise.all([
+        getTrendingMovies('day', 1),
+        getTrendingMovies('week', 1),
+        getTrendingMovies('month', 1),
+        searchMovies('Sci-Fi')
+      ]);
 
-        const featuredBase = popularRes.Search?.[0] || actionRes.Search?.[0] || trendingRes.Search?.[0];
-        if (featuredBase) {
-          console.log('[v0] Fetching details for featured movie:', featuredBase.Title);
-          // Fetch details for top 5 in parallel for the rotating banner
-          const topCandidates = popularRes.Search?.slice(0, 5) || [];
-          const detailResults = await Promise.all(
-            topCandidates.map((m: SearchMovie) => getMovieDetails(m.imdbID))
-          );
-          const validFeatured = detailResults.filter(Boolean) as Movie[];
-          if (validFeatured.length > 0) {
-            setFeaturedMovies(validFeatured);
-            setFeaturedMovie(validFeatured[0]);
-          }
-        } else {
-          console.error('[v0] No search results received');
+      if (window.location.pathname !== '/') return;
+
+      if (popularRes.Search) setPopularMovies(popularRes.Search.slice(0, 12));
+      if (actionRes.Search) setActionMovies(actionRes.Search.slice(0, 12));
+      if (trendingRes.Search) setTrendingMovies(trendingRes.Search.slice(0, 12));
+      if (scifiRes.Search) setScifiMovies(scifiRes.Search.slice(0, 12));
+
+      const featuredBase = popularRes.Search?.[0] || actionRes.Search?.[0] || trendingRes.Search?.[0];
+      if (featuredBase) {
+        console.log('[v0] Fetching details for featured movie:', featuredBase.Title);
+        const topCandidates = popularRes.Search?.slice(0, 5) || [];
+        const detailResults = await Promise.all(
+          topCandidates.map((m: SearchMovie) => getMovieDetails(m.imdbID))
+        );
+
+        if (window.location.pathname !== '/') return;
+
+        const validFeatured = detailResults.filter(Boolean) as Movie[];
+        if (validFeatured.length > 0) {
+          setFeaturedMovies(validFeatured);
+          setFeaturedMovie(validFeatured[0]);
         }
-      } catch (error) {
-        console.error('[v0] Failed to load movies:', error);
-      } finally {
+      }
+    } catch (error) {
+      console.error('[v0] Failed to load movies:', error);
+    } finally {
+      if (window.location.pathname === '/') {
         setIsLoading(false);
       }
-    };
+    }
+  };
 
-    const loadCategoryMovies = async (cat: string) => {
-      setIsLoading(true);
-      try {
-        console.log(`[v0] Loading category: ${cat}`);
-        if (cat === 'Movies') {
-          // Fetch multiple pages of movies to show "everything available"
-          const [page1, page2, page3] = await Promise.all([
-            getTrendingMovies('week', 1),
-            getTrendingMovies('week', 2),
-            getTrendingMovies('week', 3)
-          ]);
+  const loadCategoryMovies = async (cat: string, page: number = 1) => {
+    // CRITICAL: Prevent execution if we've already navigated away
+    if (window.location.pathname !== '/') return;
 
-          const allMovies = [
-            ...(page1.Search || []),
-            ...(page2.Search || []),
-            ...(page3.Search || [])
-          ].filter(m => m.Type === 'movie');
+    if (page === 1) setIsLoading(true);
+    else setIsMoreLoading(true);
 
-          setPopularMovies(allMovies);
-          setActionMovies([]);
-          setScifiMovies([]);
-          setTrendingMovies([]);
-        } else if (cat === 'Popular') {
-          const [popularRes, new2025, new2026] = await Promise.all([
-            getTrendingMovies('day', 1),
-            searchMovies('2025'),
-            searchMovies('2026')
-          ]);
-          if (popularRes.Search) setPopularMovies(popularRes.Search.slice(0, 16));
-          if (new2025.Search || new2026.Search) {
-            setActionMovies([...(new2025.Search || []), ...(new2026.Search || [])].slice(0, 16));
-          }
-          setScifiMovies([]);
-          setTrendingMovies([]);
+    try {
+      console.log(`[v0] Loading category: ${cat}, page: ${page}`);
+      if (cat === 'Movies') {
+        const [movieRes, seriesRes] = await Promise.all([
+          getTrendingMovies('week', page),
+          searchMovies('TV Series', page)
+        ]);
+
+        // Guard again after async await
+        if (window.location.pathname !== '/') return;
+
+        const newResults = [
+          ...(movieRes.Search || []),
+          ...(seriesRes.Search || [])
+        ].filter((item, index, self) =>
+          index === self.findIndex((t) => t.imdbID === item.imdbID)
+        );
+
+        setPopularMovies(prev => {
+          const combined = page === 1 ? newResults : [...prev, ...newResults];
+          const seen = new Set();
+          return combined.filter(m => {
+            if (!m.imdbID || seen.has(m.imdbID)) return false;
+            seen.add(m.imdbID);
+            return true;
+          });
+        });
+
+        setHasMore(newResults.length > 0);
+        setActionMovies([]);
+        setScifiMovies([]);
+        setTrendingMovies([]);
+      } else if (cat === 'Popular') {
+        const [popularRes, new2025, new2026] = await Promise.all([
+          getTrendingMovies('day', 1),
+          searchMovies('2025'),
+          searchMovies('2026')
+        ]);
+
+        if (window.location.pathname !== '/') return;
+
+        if (popularRes.Search) setPopularMovies(popularRes.Search.slice(0, 16));
+        if (new2025.Search || new2026.Search) {
+          setActionMovies([...(new2025.Search || []), ...(new2026.Search || [])].slice(0, 16));
         }
+        setScifiMovies([]);
+        setTrendingMovies([]);
+        setHasMore(false);
+      }
 
-        // Pick featured movie for category page (use fresh results not stale state)
+      if (page === 1) {
         let featuredCandidate: any = null;
         if (cat === 'Movies') {
           const r = await getTrendingMovies('week', 1);
@@ -126,21 +162,42 @@ export default function Home() {
         }
         if (featuredCandidate) {
           const details = await getMovieDetails(featuredCandidate.imdbID);
-          setFeaturedMovie(details || featuredCandidate as Movie);
+          if (window.location.pathname === '/') {
+            setFeaturedMovie(details || featuredCandidate as Movie);
+          }
         }
-      } catch (error) {
-        console.error(`[v0] Failed to load ${cat}:`, error);
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error(`[v0] Failed to load ${cat}:`, error);
+      if (page === 1 && window.location.pathname === '/') {
+        setPopularMovies([]);
+        setHasMore(false);
+      }
+    } finally {
+      if (window.location.pathname === '/') {
+        setIsLoading(false);
+        setIsMoreLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (pathname !== '/') return;
 
     if (category === 'All') {
       loadPopularMovies();
+      setHasMore(false);
     } else {
-      loadCategoryMovies(category);
+      loadCategoryMovies(category, currentPage);
     }
-  }, [category]);
+  }, [category, currentPage, pathname]);
+
+  // Reset page when category changes
+  useEffect(() => {
+    if (pathname !== '/') return;
+    setCurrentPage(1);
+    setHasMore(true);
+  }, [category, pathname]);
 
   // Animate page in when loaded
   useEffect(() => {
@@ -183,20 +240,18 @@ export default function Home() {
   };
 
   return (
-    <main ref={containerRef} className="flex min-h-screen bg-gray-50">
+    <main ref={containerRef} className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-[#0d1f1f] transition-colors">
       {/* Navbar */}
       <Navbar />
 
       {/* Main Content */}
-      <div className="flex-1 md:ml-44 pt-16 md:pt-0">
+      <div className="flex-1 md:ml-44 pt-0">
         {/* Search Section */}
-        <div className="hidden md:flex md:flex-col md:items-start md:p-8 md:gap-4 bg-white border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-800">Discover Movies</h2>
+        <div className="hidden md:flex md:flex-col md:items-start md:p-8 md:gap-4 bg-white dark:bg-[#1a3a3a] border-b border-gray-200 dark:border-white/10 transition-colors">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Discover Movies</h2>
           <SearchBar onSearch={handleSearch} />
-        </div>
-
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-4 md:p-8">
+        </div>        {/* Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-4 pb-4 pt-0 md:p-8">
           {/* Left Section - Featured and Carousel */}
           <div className="lg:col-span-3 space-y-8">
             {/* Featured Movie — Conveyor Belt Slider */}
@@ -208,7 +263,7 @@ export default function Home() {
                   const curr = featuredMovies[featuredIndex];
                   const next = featuredMovies[(featuredIndex + 1) % featuredMovies.length];
                   return (
-                    <div className="relative rounded-2xl overflow-hidden" style={{ height: '24rem' }}>
+                    <div className="relative rounded-2xl overflow-hidden shadow-lg h-[18rem] md:h-[24rem]">
                       {/* Double-wide flex track — slides left to reveal next */}
                       <div
                         style={{
@@ -224,29 +279,38 @@ export default function Home() {
                         {[curr, next].map((movie, i) => movie && (
                           <div key={`${movie.imdbID}-${i}`} style={{ width: '50%', flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
                             {/* Poster background */}
-                            {movie.Poster && movie.Poster !== 'N/A' && (
-                              <div style={{
-                                position: 'absolute', inset: 0,
-                                backgroundImage: `url('${movie.Poster}')`,
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center',
-                                filter: 'brightness(0.38)',
-                              }} />
-                            )}
-                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(26,58,58,0.85) 0%, transparent 60%)' }} />
+                            <div style={{
+                              position: 'absolute', inset: 0,
+                              backgroundColor: '#1a3a3a',
+                              backgroundImage: movie.Poster && movie.Poster !== 'N/A' ? `url('${movie.Poster}')` : 'none',
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              filter: 'brightness(0.38)',
+                            }} />
+                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(26,58,58,0.95) 0%, transparent 80%)' }} className="md:bg-gradient-to-r md:from-[rgba(26,58,58,0.85)] md:to-transparent" />
                             {/* Content */}
-                            <div className="relative z-10 text-white max-w-xl" style={{ padding: '2rem 3rem' }}>
-                              <h1 className="text-4xl md:text-5xl font-bold mb-3 leading-tight">{movie.Title}</h1>
-                              <div className="flex gap-4 mb-3 text-sm opacity-90">
-                                <span>⭐ {movie.imdbRating || 'N/A'}</span>
+                            <div className="relative z-10 text-white max-w-xl px-6 py-8 md:px-12 md:py-8">
+                              <h1 className="text-2xl md:text-5xl font-bold mb-2 md:mb-3 leading-tight text-white drop-shadow-lg">{movie.Title}</h1>
+                              <div className="flex gap-3 md:gap-4 mb-3 text-xs md:text-sm opacity-90 text-white/90 font-medium">
+                                <span className="flex items-center gap-1">⭐ {movie.imdbRating || 'N/A'}</span>
                                 <span>{movie.Runtime || ''}</span>
                                 <span>{movie.Released ? new Date(movie.Released).getFullYear() : movie.Year || ''}</span>
                               </div>
-                              <p className="text-sm leading-relaxed mb-5 line-clamp-2 opacity-75">{movie.Plot}</p>
+                              <p className="text-xs md:text-sm opacity-80 line-clamp-2 md:line-clamp-3 mb-4 md:mb-6 text-white/80 max-w-sm">{movie.Plot || ''}</p>
                               {i === 0 && (
-                                <div className="flex flex-wrap gap-3 mb-4">
-                                  <Link href={`/movie/${movie.imdbID}`} className="px-6 py-2.5 bg-white text-[#1a3a3a] rounded-lg font-semibold hover:bg-gray-100 transition-colors text-sm">▶ Watch Now</Link>
-                                  <button onClick={() => addToWatchlist({ imdbID: movie.imdbID, title: movie.Title, poster: movie.Poster, year: movie.Released || movie.Year, type: 'movie' })} className="px-6 py-2.5 border-2 border-white/70 text-white rounded-lg font-semibold hover:bg-white/10 transition-colors text-sm">+ Add to List</button>
+                                <div className="flex flex-wrap gap-2 md:gap-3 mb-4">
+                                  <Link
+                                    href={`/movie/${movie.imdbID}`}
+                                    className="px-5 py-2 md:px-6 md:py-2.5 bg-white text-[#1a3a3a] rounded-lg font-bold hover:bg-teal-50 transition-all text-xs md:text-sm shadow-md active:scale-95"
+                                  >
+                                    ▶ Watch Now
+                                  </Link>
+                                  <button
+                                    onClick={() => addToWatchlist({ imdbID: movie.imdbID, title: movie.Title, poster: movie.Poster, year: movie.Released || movie.Year, type: 'movie' })}
+                                    className="px-5 py-2 md:px-6 md:py-2.5 border-2 border-white/50 text-white rounded-lg font-bold hover:bg-white/10 transition-all text-xs md:text-sm backdrop-blur-sm active:scale-95"
+                                  >
+                                    + Add to List
+                                  </button>
                                 </div>
                               )}
                               {i === 0 && featuredMovies.length > 1 && (
@@ -254,8 +318,8 @@ export default function Home() {
                                   {featuredMovies.map((_, di) => (
                                     <button
                                       key={di}
-                                      onClick={() => { if (!isSliding) { setFeaturedIndex(di); } }}
-                                      style={{ width: di === featuredIndex ? '24px' : '8px', height: '8px', borderRadius: '9999px', background: di === featuredIndex ? 'white' : 'rgba(255,255,255,0.35)', transition: 'all 0.3s ease' }}
+                                      onClick={(e) => { e.preventDefault(); if (!isSliding) { setFeaturedIndex(di); } }}
+                                      style={{ width: di === featuredIndex ? '20px' : '6px', height: '6px', borderRadius: '9999px', background: di === featuredIndex ? 'white' : 'rgba(255,255,255,0.35)', transition: 'all 0.3s ease' }}
                                     />
                                   ))}
                                 </div>
@@ -273,11 +337,11 @@ export default function Home() {
             {/* Search Results or Popular Movies */}
             {hasSearched ? (
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Search Results</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mb-6">Search Results</h2>
                 {isLoading ? (
                   <SkeletonLoader count={8} />
                 ) : searchResults.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {searchResults.map((movie) => (
                       <div key={movie.imdbID}>
                         <MovieCard
@@ -299,15 +363,18 @@ export default function Home() {
             ) : (
               <>
                 {/* Popular Movies Carousel */}
-                {isLoading ? (
+                {isLoading && popularMovies.length === 0 ? (
                   <SkeletonLoader type="carousel" />
                 ) : popularMovies.length > 0 ? (
                   category === 'Movies' ? (
                     <div className="space-y-6">
-                      <h2 className="text-2xl font-bold text-gray-800">Available Movies</h2>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
-                        {popularMovies.map((movie) => (
-                          <div key={movie.imdbID} className="transform hover:scale-105 transition-transform duration-300">
+                      <div className="flex justify-between items-center">
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Available Content</h2>
+                        <span className="text-xs text-gray-500">{popularMovies.length} items</span>
+                      </div>
+                      <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+                        {popularMovies.map((movie, idx) => (
+                          <div key={`${movie.imdbID}-${idx}`} className="transform hover:scale-105 transition-transform duration-300">
                             <MovieCard
                               imdbID={movie.imdbID}
                               title={movie.Title}
@@ -318,6 +385,28 @@ export default function Home() {
                           </div>
                         ))}
                       </div>
+                      {hasMore && (
+                        <div className="flex justify-center pt-8 pb-12">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              loadMore();
+                            }}
+                            disabled={isLoading || isMoreLoading}
+                            className={`px-8 py-3 bg-[#1a3a3a] text-white rounded-xl font-bold hover:bg-[#2d5a5a] transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg z-10 flex items-center gap-2`}
+                          >
+                            {isMoreLoading ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                Loading More...
+                              </>
+                            ) : (
+                              'Load More Content'
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <MoviesCarousel title={category === 'All' ? "Popular Now" : `${category}`} movies={popularMovies} />
@@ -337,22 +426,7 @@ export default function Home() {
           </div>
 
           {/* Right Section - Stats Panel */}
-          <StatsPanel
-            watchTime={`${Math.max(12, watchlist.length * 2.5)}h`}
-            wishList={watchlist.length}
-            subscription="Pro"
-            comments={12}
-            users={[
-              { id: '1', name: 'User 1', avatar: '' },
-              { id: '2', name: 'User 2', avatar: '' },
-              { id: '3', name: 'User 3', avatar: '' },
-            ]}
-            watchlist={watchlist.map((item) => ({
-              id: item.imdbID,
-              title: item.title,
-              poster: item.poster,
-            }))}
-          />
+          <StatsPanel />
         </div>
       </div>
     </main>

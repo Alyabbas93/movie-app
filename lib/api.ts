@@ -48,8 +48,9 @@ const cache: { [key: string]: any } = {};
 
 // Helper to map 2embed movie to our existing Movie/Search format
 const mapToMovie = (item: any) => {
+  const id = item.imdb_id || item.tmdb_id?.toString();
   return {
-    imdbID: item.imdb_id || item.tmdb_id?.toString() || '',
+    imdbID: id || '',
     Title: item.title || item.name || '',
     Year: item.year || item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4) || '',
     Poster: item.poster || 'N/A',
@@ -75,7 +76,9 @@ export async function searchMovies(query: string, page: number = 1): Promise<Sea
     const data = await response.json();
 
     if (data.results && data.results.length > 0) {
-      const validResults = data.results.filter((item: any) => item.poster && item.poster !== 'N/A');
+      const validResults = data.results.filter((item: any) =>
+        item.poster && item.poster !== 'N/A' && (item.imdb_id || item.tmdb_id)
+      );
       const mappedSearch = {
         Search: validResults.map(mapToMovie),
         totalResults: data.total_results?.toString() || validResults.length.toString(),
@@ -106,7 +109,9 @@ export async function getTrendingMovies(timeWindow: 'day' | 'week' | 'month' = '
     const data = await response.json();
 
     if (data.results && data.results.length > 0) {
-      const validResults = data.results.filter((item: any) => item.poster && item.poster !== 'N/A');
+      const validResults = data.results.filter((item: any) =>
+        item.poster && item.poster !== 'N/A' && (item.imdb_id || item.tmdb_id)
+      );
       const mappedSearch = {
         Search: validResults.map(mapToMovie),
         totalResults: data.total_results?.toString() || validResults.length.toString(),
@@ -122,23 +127,29 @@ export async function getTrendingMovies(timeWindow: 'day' | 'week' | 'month' = '
   }
 }
 
-export async function getMovieDetails(imdbID: string): Promise<Movie | null> {
-  const cacheKey = `movie-${imdbID}`;
+export async function getMovieDetails(id: string): Promise<Movie | null> {
+  const cacheKey = `movie-${id}`;
 
   if (cache[cacheKey]) {
-    console.log('[v0] Using cached details for:', imdbID);
+    console.log('[v0] Using cached details for:', id);
     return cache[cacheKey];
   }
 
   try {
-    console.log('[v0] Fetching details for:', imdbID);
-    const response = await fetch(`/api/proxy?endpoint=movie&imdb_id=${imdbID}`);
+    console.log('[v0] Fetching details for:', id);
+
+    // Determine if it's an IMDB ID or TMDB ID
+    // IMDB IDs usually start with 'tt'
+    const isImdb = id.startsWith('tt');
+    const param = isImdb ? `imdb_id=${id}` : `tmdb_id=${id}`;
+
+    const response = await fetch(`/api/proxy?endpoint=movie&${param}`);
     if (!response.ok) throw new Error('Failed to fetch details');
     const data = await response.json();
 
     if (data && data.title) {
       const mappedMovie: Movie = {
-        imdbID: data.imdb_id || imdbID,
+        imdbID: data.imdb_id || data.tmdb_id?.toString() || id,
         Title: data.title,
         Year: data.year || data.release_date?.substring(0, 4) || 'N/A',
         Rated: data.certification || 'N/A',
@@ -151,8 +162,8 @@ export async function getMovieDetails(imdbID: string): Promise<Movie | null> {
         Plot: data.plot || data.overview || 'N/A',
         Language: data.original_language || 'N/A',
         Country: data.production_countries?.join(', ') || 'N/A',
-        Awards: 'N/A', // Not provided by 2embed
-        Poster: data.poster || 'N/A',
+        Awards: 'N/A',
+        Poster: data.poster && data.poster !== 'N/A' ? data.poster : 'N/A',
         Ratings: [{ Source: 'TMDB', Value: `${data.vote_average}/10` }],
         Metascore: 'N/A',
         imdbRating: data.vote_average?.toString() || 'N/A',

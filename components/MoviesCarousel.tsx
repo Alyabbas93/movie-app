@@ -32,7 +32,7 @@ export const MoviesCarousel: React.FC<MoviesCarouselProps> = ({ title, movies })
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white transition-colors">{title}</h3>
         <div className="flex gap-2">
           <button
             onClick={() => scroll('left')}
@@ -53,13 +53,13 @@ export const MoviesCarousel: React.FC<MoviesCarouselProps> = ({ title, movies })
 
       <div
         ref={scrollContainerRef}
-        className="flex gap-4 overflow-x-auto scroll-smooth pb-4"
+        className="flex gap-3 md:gap-4 overflow-x-auto scroll-smooth pb-4 px-1"
         style={{ scrollBehavior: 'auto' }}
       >
         {movies.map((movie) => (
           <div
             key={movie.imdbID}
-            className="flex-shrink-0 w-40 sm:w-48 md:w-56"
+            className="flex-shrink-0 w-36 sm:w-48 md:w-56"
           >
             <MovieCard
               imdbID={movie.imdbID}

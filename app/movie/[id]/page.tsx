@@ -23,7 +23,19 @@ export default function MoviePage({ params }: MoviePageProps) {
 
   // Handle async params
   useEffect(() => {
-    params.then((p) => setId(p.id));
+    const resolveParams = async () => {
+      try {
+        const resolved = await params;
+        if (resolved && resolved.id) {
+          setId(resolved.id);
+        }
+      } catch (err) {
+        console.error('Failed to resolve params:', err);
+        setError('Invalid movie link');
+        setIsLoading(false);
+      }
+    };
+    resolveParams();
   }, [params]);
 
   // Fetch movie details
@@ -58,12 +70,12 @@ export default function MoviePage({ params }: MoviePageProps) {
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen bg-gray-50">
+      <main className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-[#0d1f1f] transition-colors">
         <Navbar />
         <div className="flex-1 md:ml-44 pt-16 md:pt-0 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#2d5a5a] mx-auto mb-4" />
-            <p className="text-gray-600">Loading movie...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#2d5a5a] dark:border-teal-400 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">Loading movie...</p>
           </div>
         </div>
       </main>
@@ -72,19 +84,19 @@ export default function MoviePage({ params }: MoviePageProps) {
 
   if (error || !movie) {
     return (
-      <main className="flex min-h-screen bg-gray-50">
+      <main className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-[#0d1f1f] transition-colors">
         <Navbar />
         <div className="flex-1 md:ml-44 pt-16 md:pt-0">
           <div className="p-8">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-[#2d5a5a] hover:text-[#1a3a3a] font-medium mb-8"
+              className="inline-flex items-center gap-2 text-[#2d5a5a] dark:text-teal-400 hover:text-[#1a3a3a] dark:hover:text-teal-300 font-medium mb-8"
             >
               <ArrowLeft size={20} />
               Back to Home
             </Link>
             <div className="text-center py-20">
-              <p className="text-lg text-gray-600">{error || 'Movie not found'}</p>
+              <p className="text-lg text-gray-600 dark:text-gray-400">{error || 'Movie not found'}</p>
             </div>
           </div>
         </div>
@@ -93,14 +105,14 @@ export default function MoviePage({ params }: MoviePageProps) {
   }
 
   return (
-    <main ref={containerRef} className="flex min-h-screen bg-gray-50">
+    <main ref={containerRef} className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-[#0d1f1f] transition-colors">
       <Navbar />
-      <div className="flex-1 md:ml-44 pt-16 md:pt-0">
+      <div className="flex-1 md:ml-44 pt-0">
         <div className="p-4 md:p-8">
           {/* Back Button */}
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-[#2d5a5a] hover:text-[#1a3a3a] font-medium mb-8 transition-colors"
+            className="inline-flex items-center gap-2 text-[#2d5a5a] dark:text-teal-400 hover:text-[#1a3a3a] dark:hover:text-teal-300 font-medium mb-8 transition-colors"
           >
             <ArrowLeft size={20} />
             Back to Home
@@ -122,7 +134,7 @@ export default function MoviePage({ params }: MoviePageProps) {
           />
 
           {/* Video Player Section */}
-          <div className="mt-8 bg-black rounded-lg overflow-hidden shadow-xl aspect-video relative">
+          <div className="mt-8 bg-black rounded-lg overflow-hidden shadow-xl aspect-video relative ring-1 ring-white/10">
             <iframe
               title="Movie Player"
               src={`https://www.2embed.cc/embed/${movie.imdbID}`}
@@ -137,31 +149,31 @@ export default function MoviePage({ params }: MoviePageProps) {
 
           {/* Related Info Section */}
           {movie.Language && (
-            <div className="mt-8 bg-white rounded-lg p-6 md:p-8">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Additional Information</h2>
+            <div className="mt-8 bg-white dark:bg-[#1a3a3a] rounded-lg p-6 md:p-8 border border-gray-100 dark:border-white/10 shadow-sm transition-colors">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Additional Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {movie.Language && movie.Language !== 'N/A' && (
                   <div>
-                    <h3 className="font-semibold text-gray-700 mb-2">Languages</h3>
-                    <p className="text-gray-600">{movie.Language}</p>
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Languages</h3>
+                    <p className="text-gray-600 dark:text-gray-400">{movie.Language}</p>
                   </div>
                 )}
                 {movie.Country && movie.Country !== 'N/A' && (
                   <div>
-                    <h3 className="font-semibold text-gray-700 mb-2">Country</h3>
-                    <p className="text-gray-600">{movie.Country}</p>
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Country</h3>
+                    <p className="text-gray-600 dark:text-gray-400">{movie.Country}</p>
                   </div>
                 )}
                 {movie.Awards && movie.Awards !== 'N/A' && (
                   <div>
-                    <h3 className="font-semibold text-gray-700 mb-2">Awards</h3>
-                    <p className="text-gray-600">{movie.Awards}</p>
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Awards</h3>
+                    <p className="text-gray-600 dark:text-gray-400">{movie.Awards}</p>
                   </div>
                 )}
                 {movie.Metascore && movie.Metascore !== 'N/A' && (
                   <div>
-                    <h3 className="font-semibold text-gray-700 mb-2">Metascore</h3>
-                    <p className="text-gray-600">{movie.Metascore}/100</p>
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Metascore</h3>
+                    <p className="text-gray-600 dark:text-gray-400">{movie.Metascore}/100</p>
                   </div>
                 )}
               </div>
