@@ -1,8 +1,19 @@
 import type { Metadata, Viewport } from 'next'
+import { Outfit, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { WatchlistProvider } from '@/lib/WatchlistContext'
 import { ThemeProvider } from '@/lib/ThemeContext'
+
+const outfit = Outfit({
+  variable: '--font-outfit',
+  subsets: ['latin'],
+})
+
+const geistMono = Geist_Mono({
+  variable: '--font-mono',
+  subsets: ['latin'],
+})
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -42,7 +53,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans antialiased">
+      <body className={`${outfit.variable} ${geistMono.variable} font-sans antialiased`}>
         <ThemeProvider>
           <WatchlistProvider>
             {children}

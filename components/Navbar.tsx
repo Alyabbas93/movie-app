@@ -21,6 +21,7 @@ export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [mobileQuery, setMobileQuery] = useState('');
 
   const handleCategoryClick = (category: string) => {
     setActiveCategory(category);
@@ -181,15 +182,33 @@ export const Navbar: React.FC = () => {
       </header>
 
       {/* Search Bar - Mobile only */}
-      <div className="md:hidden mt-16 px-4 py-3 bg-gray-50 dark:bg-[#0d1f1f] transition-colors">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search here"
-            className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-white/5 text-sm text-gray-800 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#2d5a5a] transition-all"
-          />
-          <Search size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        </div>
+      <div className="md:hidden mt-16 px-4 py-3 bg-gray-50 dark:bg-[#0d1f1f] border-b border-gray-100 dark:border-white/5 transition-colors">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (mobileQuery.trim()) {
+              router.push(`/?q=${encodeURIComponent(mobileQuery)}`);
+            }
+          }}
+          className="flex gap-2"
+        >
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={mobileQuery}
+              onChange={(e) => setMobileQuery(e.target.value)}
+              placeholder="Search movies..."
+              className="w-full px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 text-sm text-gray-800 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#2d5a5a] transition-all border border-transparent focus:border-transparent"
+            />
+            <Search size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+          </div>
+          <button 
+            type="submit" 
+            className="px-4 py-2 bg-[#2d5a5a] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-teal-900/20 active:scale-95 transition-all"
+          >
+            Go
+          </button>
+        </form>
       </div>
     </>
   );

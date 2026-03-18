@@ -21,7 +21,7 @@ export default function MoviePage({ params }: MoviePageProps) {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeServer, setActiveServer] = useState<'server1' | 'server2'>('server1');
+  const [activeServer, setActiveServer] = useState<'server1' | 'server2' | 'server3'>('server1');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch movie details when id changes
@@ -58,6 +58,18 @@ export default function MoviePage({ params }: MoviePageProps) {
     const idToUse = movie.imdbID || id;
     if (!idToUse) return '';
     
+    if (activeServer === 'server3') {
+      const isTmdb = !idToUse.startsWith('tt');
+      const type = movie.Type === 'series' || movie.Type === 'tv' ? 'tv' : 'movie';
+      // Use directstream.php for better quality and fewer ads as per API docs
+      const base = `https://multiembed.mov/directstream.php?video_id=${idToUse}${isTmdb ? '&tmdb=1' : ''}`;
+      // For TV shows, we default to S1 E1 as we don't have a selector yet
+      if (type === 'tv') {
+        return `${base}&s=1&e=1`;
+      }
+      return base;
+    }
+
     if (activeServer === 'server2') {
       const type = movie.Type === 'series' || movie.Type === 'tv' ? 'tv' : 'movie';
       // 2embed.stream format: /movie/{id} or /tv/{id}/{s}/{e}
@@ -66,7 +78,7 @@ export default function MoviePage({ params }: MoviePageProps) {
       }
       return `https://www.2embed.stream/embed/movie/${idToUse}`;
     }
-    
+
     // Default Server 1 (2embed.cc format)
     return `https://www.2embed.cc/embed/${idToUse}`;
   };
@@ -158,30 +170,37 @@ export default function MoviePage({ params }: MoviePageProps) {
               <div className="flex gap-2">
                 <button
                   onClick={() => setActiveServer('server1')}
-                  className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                    activeServer === 'server1'
-                      ? 'bg-[#2d5a5a] text-white shadow-teal-900/20 shadow-lg scale-[1.02]'
-                      : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
-                  }`}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${activeServer === 'server1'
+                    ? 'bg-[#2d5a5a] text-white shadow-teal-900/20 shadow-lg scale-[1.02]'
+                    : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                    }`}
                 >
                   Server 1
                 </button>
                 <button
                   onClick={() => setActiveServer('server2')}
-                  className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                    activeServer === 'server2'
-                      ? 'bg-[#2d5a5a] text-white shadow-teal-900/20 shadow-lg scale-[1.02]'
-                      : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
-                  }`}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${activeServer === 'server2'
+                    ? 'bg-[#2d5a5a] text-white shadow-teal-900/20 shadow-lg scale-[1.02]'
+                    : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                    }`}
                 >
                   Server 2
+                </button>
+                <button
+                  onClick={() => setActiveServer('server3')}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${activeServer === 'server3'
+                    ? 'bg-[#2d5a5a] text-white shadow-teal-900/20 shadow-lg scale-[1.02]'
+                    : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                    }`}
+                >
+                  Server 3
                 </button>
               </div>
             </div>
 
             <div className="bg-black rounded-lg overflow-hidden shadow-2xl aspect-video relative ring-1 ring-white/10 group">
               <iframe
-                key={`${id}-${activeServer}`} 
+                key={`${id}-${activeServer}`}
                 title="Movie Player"
                 src={getPlayerUrl()}
                 width="100%"

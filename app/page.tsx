@@ -45,6 +45,7 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const category = searchParams.get('category') || 'All';
+  const queryParam = searchParams.get('q');
 
   // Load more function
   const loadMore = () => {
@@ -208,6 +209,14 @@ function HomeContent() {
     }
   }, [category, currentPage, pathname]);
 
+  // Handle URL query parameter search
+  useEffect(() => {
+    if (pathname !== '/') return;
+    if (queryParam) {
+      handleSearch(queryParam);
+    }
+  }, [queryParam, pathname]);
+
   // Reset page when category changes
   useEffect(() => {
     if (pathname !== '/') return;
@@ -333,12 +342,12 @@ function HomeContent() {
                                 <p className="text-white/80 text-sm md:text-base line-clamp-2 md:line-clamp-3 leading-relaxed max-w-xl">
                                   {movie.Plot}
                                 </p>
-                                <div className="flex items-center gap-4 mt-2">
+                                <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2">
                                   <Link
                                     href={`/movie/${movie.imdbID}`}
-                                    className="px-6 py-2.5 bg-white text-[#1a3a3a] rounded-lg font-bold flex items-center gap-2 hover:bg-[#2d5a5a] hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+                                    className="px-4 py-2 md:px-6 md:py-2.5 bg-white text-[#1a3a3a] rounded-lg font-bold flex items-center gap-2 hover:bg-[#2d5a5a] hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-lg text-xs md:text-sm"
                                   >
-                                    <Play size={18} fill="currentColor" />
+                                    <Play size={16} fill="currentColor" />
                                     Watch Now
                                   </Link>
                                   <button
@@ -349,7 +358,7 @@ function HomeContent() {
                                       year: movie.Year,
                                       type: 'movie'
                                     })}
-                                    className="px-6 py-2.5 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-lg font-bold hover:bg-white/20 transition-all transform hover:scale-105 active:scale-95"
+                                    className="px-4 py-2 md:px-6 md:py-2.5 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-lg font-bold hover:bg-white/20 transition-all transform hover:scale-105 active:scale-95 text-xs md:text-sm"
                                   >
                                     + Watchlist
                                   </button>
