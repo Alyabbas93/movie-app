@@ -21,7 +21,7 @@ export default function MoviePage({ params }: MoviePageProps) {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeServer, setActiveServer] = useState<'server1' | 'server2' | 'server3'>('server1');
+  const [activeServer, setActiveServer] = useState<'server1' | 'server2'>('server1');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch movie details when id changes
@@ -55,32 +55,22 @@ export default function MoviePage({ params }: MoviePageProps) {
   // Helper to determine the best player URL based on ID type
   const getPlayerUrl = () => {
     if (!movie) return '';
+    // Prefer real IMDB id; for TMDB-only items we use the tmdb- prefixed id
     const idToUse = movie.imdbID || id;
     if (!idToUse) return '';
-    
-    if (activeServer === 'server3') {
-      const isTmdb = !idToUse.startsWith('tt');
-      const type = movie.Type === 'series' || movie.Type === 'tv' ? 'tv' : 'movie';
-      // Use directstream.php for better quality and fewer ads as per API docs
-      const base = `https://multiembed.mov/directstream.php?video_id=${idToUse}${isTmdb ? '&tmdb=1' : ''}`;
-      // For TV shows, we default to S1 E1 as we don't have a selector yet
-      if (type === 'tv') {
-        return `${base}&s=1&e=1`;
-      }
-      return base;
-    }
+    const isTmdb = idToUse.startsWith('tmdb-');
+    const numericId = isTmdb ? idToUse.replace('tmdb-', '') : idToUse;
+    const type = movie.Type === 'series' || movie.Type === 'tv' ? 'tv' : 'movie';
 
     if (activeServer === 'server2') {
-      const type = movie.Type === 'series' || movie.Type === 'tv' ? 'tv' : 'movie';
-      // 2embed.stream format: /movie/{id} or /tv/{id}/{s}/{e}
-      if (type === 'tv') {
-        return `https://www.2embed.stream/embed/tv/${idToUse}/1/1`;
-      }
-      return `https://www.2embed.stream/embed/movie/${idToUse}`;
+      // 2embed.stream works well from Vercel
+      if (type === 'tv') return `https://www.2embed.stream/embed/tv/${numericId}/1/1`;
+      return `https://www.2embed.stream/embed/movie/${numericId}`;
     }
 
-    // Default Server 1 (2embed.cc format)
-    return `https://www.2embed.cc/embed/${idToUse}`;
+    // Server 1: vidsrc.to (reliable, fast CDN)
+    if (type === 'tv') return `https://vidsrc.to/embed/tv/${numericId}`;
+    return `https://vidsrc.to/embed/movie/${numericId}`;
   };
 
   // Animate on load
@@ -185,15 +175,6 @@ export default function MoviePage({ params }: MoviePageProps) {
                     }`}
                 >
                   Server 2
-                </button>
-                <button
-                  onClick={() => setActiveServer('server3')}
-                  className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${activeServer === 'server3'
-                    ? 'bg-[#2d5a5a] text-white shadow-teal-900/20 shadow-lg scale-[1.02]'
-                    : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
-                    }`}
-                >
-                  Server 3
                 </button>
               </div>
             </div>

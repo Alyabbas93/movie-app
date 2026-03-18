@@ -1,33 +1,22 @@
 import { NextResponse } from 'next/server';
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 3, backoff = 1000): Promise<Response> {
+const TMDB_API_KEY = process.env.TMDB_API_KEY || '8265bd1679663a7ea12ac168da84d2e8'; // public fallback key for TMDB
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+
+async function fetchWithRetry(url: string, options: RequestInit, retries = 2, backoff = 800): Promise<Response> {
     for (let i = 0; i < retries; i++) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-
-            const response = await fetch(url, {
-                ...options,
-                signal: controller.signal
-            });
-
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
+            const response = await fetch(url, { ...options, signal: controller.signal });
             clearTimeout(timeoutId);
-
-            // If it's a server error (5xx), try again
             if (!response.ok && response.status >= 500 && i < retries - 1) {
-                console.log(`[proxy] Retrying due to server error ${response.status} (attempt ${i + 1}/${retries})`);
                 await new Promise(resolve => setTimeout(resolve, backoff * (i + 1)));
                 continue;
             }
-
             return response;
         } catch (error: any) {
             if (i === retries - 1) throw error;
-
-            const isTimeout = error.name === 'AbortError' || error.message?.includes('timeout');
-            console.log(`[proxy] Retrying due to ${isTimeout ? 'timeout' : 'network error'} (attempt ${i + 1}/${retries})`);
-
-            // Wait before next attempt (exponential backoff)
             await new Promise(resolve => setTimeout(resolve, backoff * (i + 1)));
         }
     }
@@ -35,71 +24,98 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3, ba
 }
 
 export async function GET(request: Request) {
-    const urlObj = new URL(request.url);
-    const searchParams = urlObj.searchParams;
+    const { searchParams } = new URL(request.url);
     const endpoint = searchParams.get('endpoint');
-    const remote = searchParams.get('remote') || '2embed';
+    const remote = searchParams.get('remote') || 'tmdb';
 
-    // Whitelist allowed domains for security
+    // Whitelist
     const remoteMap: { [key: string]: string } = {
-        '2embed': 'https://www.2embed.cc', // Updated to www
-        '2embedapi': 'https://api.2embed.cc',
+        'tmdb': TMDB_BASE,
         'omdb': 'https://www.omdbapi.com',
-        'multiembed': 'https://multiembed.mov'
     };
 
     const baseUrl = remoteMap[remote];
     if (!baseUrl) {
-        console.error(`[proxy] Blocked invalid remote: ${remote}`);
         return NextResponse.json({ error: 'Invalid remote source' }, { status: 400 });
     }
 
     try {
-        let targetUrl = `${baseUrl}/${endpoint || ''}`;
-        
-        // Handle OMDb which uses params instead of endpoints usually
+        let targetUrl: string;
+
         if (remote === 'omdb') {
             targetUrl = baseUrl;
-        }
-
-        const targetUrlObj = new URL(targetUrl);
-        searchParams.forEach((value, key) => {
-            if (key !== 'endpoint' && key !== 'remote') {
-                targetUrlObj.searchParams.append(key, value);
+            const omdbParams = new URL(targetUrl);
+            searchParams.forEach((value, key) => {
+                if (key !== 'endpoint' && key !== 'remote') {
+                    omdbParams.searchParams.append(key, value);
+                }
+            });
+            const response = await fetchWithRetry(omdbParams.toString(), {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) {
+                return NextResponse.json({ error: `OMDb error: ${response.status}` }, { status: response.status });
             }
-        });
-
-        console.log(`[proxy] Routing ${remote} -> ${targetUrlObj.host}${targetUrlObj.pathname}`);
-
-        const response = await fetchWithRetry(targetUrlObj.toString(), {
-            headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            },
-            next: { revalidate: 3600 } // Cache for 1 hour on Vercel
-        });
-
-        if (!response.ok) {
-            console.error(`[proxy] Upstream error ${response.status} from ${remote}`);
-            return NextResponse.json(
-                { error: `Upstream API error: ${response.status} from ${remote}` },
-                { status: response.status }
-            );
+            const data = await response.json();
+            return NextResponse.json(data);
         }
 
-        const data = await response.json();
-        return NextResponse.json(data);
+        // --- TMDB routing ---
+        if (remote === 'tmdb') {
+            const q = searchParams.get('q');
+            const imdb_id = searchParams.get('imdb_id');
+            const tmdb_id = searchParams.get('tmdb_id');
+            const time_window = searchParams.get('time_window') || 'week';
+            const page = searchParams.get('page') || '1';
+
+            if (endpoint === 'search' && q) {
+                // Multi-search
+                const url = `${TMDB_BASE}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(q)}&page=${page}&include_adult=false`;
+                const res = await fetchWithRetry(url, { headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                return NextResponse.json(data);
+            }
+
+            if (endpoint === 'trending') {
+                const url = `${TMDB_BASE}/trending/all/${time_window}?api_key=${TMDB_API_KEY}&page=${page}`;
+                const res = await fetchWithRetry(url, { headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                return NextResponse.json(data);
+            }
+
+            if (endpoint === 'movie') {
+                if (imdb_id) {
+                    // Find by IMDB id
+                    const findUrl = `${TMDB_BASE}/find/${imdb_id}?api_key=${TMDB_API_KEY}&external_source=imdb_id`;
+                    const findRes = await fetchWithRetry(findUrl, { headers: { 'Accept': 'application/json' } });
+                    const findData = await findRes.json();
+                    const item = findData.movie_results?.[0] || findData.tv_results?.[0];
+                    if (item) {
+                        // Get full details
+                        const type = findData.movie_results?.[0] ? 'movie' : 'tv';
+                        const detailUrl = `${TMDB_BASE}/${type}/${item.id}?api_key=${TMDB_API_KEY}&append_to_response=credits,external_ids`;
+                        const detailRes = await fetchWithRetry(detailUrl, { headers: { 'Accept': 'application/json' } });
+                        const detail = await detailRes.json();
+                        return NextResponse.json({ ...detail, _type: type, _imdb_id: imdb_id });
+                    }
+                    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+                }
+                if (tmdb_id) {
+                    const type = searchParams.get('type') || 'movie';
+                    const detailUrl = `${TMDB_BASE}/${type}/${tmdb_id}?api_key=${TMDB_API_KEY}&append_to_response=credits,external_ids`;
+                    const detailRes = await fetchWithRetry(detailUrl, { headers: { 'Accept': 'application/json' } });
+                    const detail = await detailRes.json();
+                    return NextResponse.json({ ...detail, _type: type });
+                }
+                return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+            }
+        }
+
+        return NextResponse.json({ error: 'Unknown endpoint' }, { status: 400 });
     } catch (error: any) {
-        console.error(`[proxy error from ${remote}]`, error.message);
-
         const isTimeout = error.name === 'AbortError' || error.message?.includes('timeout');
-
         return NextResponse.json(
-            {
-                error: isTimeout ? 'The movie database is taking too long to respond.' : 'Failed to fetch data from the movie database.',
-                details: error.message,
-                remote: remote
-            },
+            { error: isTimeout ? 'Timeout fetching data' : 'Failed to fetch data', details: error.message },
             { status: isTimeout ? 504 : 500 }
         );
     }

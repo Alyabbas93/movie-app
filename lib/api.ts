@@ -1,7 +1,5 @@
-const API_KEY = process.env.NEXT_PUBLIC_OMDB_API_KEY; // Kept to avoid env errors, but unused internally
-const BASE_URL = 'https://api.2embed.cc';
-
-// No OMDB key block warning anymore since 2embed doesn't require it
+const API_KEY = process.env.NEXT_PUBLIC_OMDB_API_KEY;
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
 
 export interface Movie {
   imdbID: string;
@@ -19,10 +17,7 @@ export interface Movie {
   Country: string;
   Awards: string;
   Poster: string;
-  Ratings: Array<{
-    Source: string;
-    Value: string;
-  }>;
+  Ratings: Array<{ Source: string; Value: string; }>;
   Metascore: string;
   imdbRating: string;
   imdbVotes: string;
@@ -46,183 +41,182 @@ export interface SearchResult {
 // Cache to minimize API calls
 const cache: { [key: string]: any } = {};
 
-// Helper to map 2embed movie to our existing Movie/Search format
-const mapToMovie = (item: any) => {
-  const id = item.imdb_id || item.tmdb_id?.toString();
+// Helper: build poster URL from TMDB path
+const getPosterUrl = (path: string | null | undefined): string => {
+  if (!path) return 'N/A';
+  if (path.startsWith('http')) return path; // already full URL (e.g. OMDb)
+  return `${TMDB_IMAGE_BASE}${path}`;
+};
+
+// Map a TMDB multi-search/trending result to our format
+const mapTmdbItem = (item: any) => {
+  const isMovie = item.media_type === 'movie' || item.title;
   return {
-    imdbID: id || '',
+    imdbID: item.external_ids?.imdb_id || item.imdb_id || `tmdb-${item.id}`,
     Title: item.title || item.name || '',
-    Year: item.year || item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4) || '',
-    Poster: item.poster || 'N/A',
-    Type: item.title ? 'movie' : 'series',
+    Year: (item.release_date || item.first_air_date || '').substring(0, 4),
+    Poster: getPosterUrl(item.poster_path),
+    Type: isMovie ? 'movie' : 'series',
+    _tmdbId: item.id,
   };
 };
 
 export async function searchMovies(query: string, page: number = 1): Promise<SearchResult> {
   const cacheKey = `search-${query}-${page}`;
-
-  if (cache[cacheKey]) {
-    console.log('[v0] Using cached results for:', query);
-    return cache[cacheKey];
-  }
+  if (cache[cacheKey]) return cache[cacheKey];
 
   try {
     console.log('[v0] Hybrid searching for:', query);
-    
-    // Fetch from both sources in parallel
+
     const [tmdbRes, omdbRes] = await Promise.allSettled([
-      fetch(`/api/proxy?endpoint=search&q=${encodeURIComponent(query)}&page=${page}&remote=2embed`).then(r => r.json()),
-      fetch(`/api/proxy?remote=omdb&apikey=${API_KEY}&s=${encodeURIComponent(query)}&page=${page}`).then(r => r.json())
+      fetch(`/api/proxy?endpoint=search&q=${encodeURIComponent(query)}&page=${page}&remote=tmdb`).then(r => r.json()),
+      API_KEY ? fetch(`/api/proxy?remote=omdb&apikey=${API_KEY}&s=${encodeURIComponent(query)}&page=${page}`).then(r => r.json()) : Promise.resolve(null)
     ]);
 
-    let combinedResults: any[] = [];
-    let totalResults = 0;
+    let combined: any[] = [];
+    let total = 0;
 
-    // Process TMDB results
-    if (tmdbRes.status === 'fulfilled' && tmdbRes.value.results) {
-      combinedResults.push(...tmdbRes.value.results.map(mapToMovie));
-      totalResults += parseInt(tmdbRes.value.total_results || '0');
+    if (tmdbRes.status === 'fulfilled' && tmdbRes.value?.results) {
+      const items = tmdbRes.value.results
+        .filter((i: any) => i.media_type !== 'person' && i.poster_path)
+        .map(mapTmdbItem);
+      combined.push(...items);
+      total += tmdbRes.value.total_results || 0;
     }
 
-    // Process OMDb results
-    if (omdbRes.status === 'fulfilled' && omdbRes.value.Search) {
-      combinedResults.push(...omdbRes.value.Search);
-      totalResults += parseInt(omdbRes.value.totalResults || '0');
+    if (omdbRes.status === 'fulfilled' && omdbRes.value?.Search) {
+      combined.push(...omdbRes.value.Search);
+      total += parseInt(omdbRes.value.totalResults || '0');
     }
 
-    // Deduplicate and filter
-    if (combinedResults.length > 0) {
-      const seen = new Set();
-      const deduplicated = combinedResults.filter(item => {
-        // Primary key: imdbID
-        const idKey = item.imdbID;
-        // Secondary key: Normalized Title + Year (for fuzzy matching when IDs differ)
-        const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const fuzzyKey = `${normalize(item.Title)}-${item.Year}`;
+    // Deduplicate
+    const seen = new Set<string>();
+    const deduped = combined.filter(item => {
+      const key = item.imdbID || item.Title;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return item.Poster && item.Poster !== 'N/A' && item.imdbID;
+    });
 
-        if (idKey && idKey !== 'N/A' && seen.has(idKey)) return false;
-        if (seen.has(fuzzyKey)) return false;
-
-        if (idKey && idKey !== 'N/A') seen.add(idKey);
-        seen.add(fuzzyKey);
-        
-        // Filter out items without posters or valid IDs
-        return item.Poster && item.Poster !== 'N/A' && item.imdbID;
-      });
-
-      const mappedSearch = {
-        Search: deduplicated,
-        totalResults: totalResults.toString(),
-        Response: 'True'
-      };
-      cache[cacheKey] = mappedSearch;
-      return mappedSearch;
-    } else {
-      return { Search: [], totalResults: '0', Response: 'False', Error: 'Movie not found!' };
-    }
+    const result: SearchResult = {
+      Search: deduped,
+      totalResults: total.toString(),
+      Response: deduped.length > 0 ? 'True' : 'False',
+      Error: deduped.length === 0 ? 'Movie not found!' : undefined
+    };
+    cache[cacheKey] = result;
+    return result;
   } catch (error) {
     console.error('[v0] Search error:', error);
-    return { Search: [], totalResults: '0', Response: 'False', Error: 'Network error' };
+    return { Search: [], totalResults: '0', Response: 'False', Error: 'Search failed' };
   }
 }
 
 export async function getTrendingMovies(timeWindow: 'day' | 'week' | 'month' = 'week', page: number = 1): Promise<SearchResult> {
-  const cacheKey = `trending-${timeWindow}-${page}`;
+  // TMDB only has day/week trending — map month to week
+  const tw = timeWindow === 'month' ? 'week' : timeWindow;
+  const cacheKey = `trending-${tw}-${page}`;
+  if (cache[cacheKey]) return cache[cacheKey];
 
-  if (cache[cacheKey]) {
-    return cache[cacheKey];
-  }
+  try {
+    console.log(`[v0] Fetching trending (${tw})...`);
+    const res = await fetch(`/api/proxy?endpoint=trending&time_window=${tw}&page=${page}&remote=tmdb`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
 
-  // Try multiple remote endpoints for trending to ensure robustness on Vercel
-  const remotes = ['2embedapi', '2embed'];
-  
-  for (const remote of remotes) {
-    try {
-      console.log(`[v0] Fetching trending from ${remote}...`);
-      const url = `/api/proxy?endpoint=trending&time_window=${timeWindow}&page=${page}&remote=${remote}`;
-      const response = await fetch(url);
-      if (!response.ok) continue;
-      
-      const data = await response.json();
-      if (data.results && data.results.length > 0) {
-        const validResults = data.results.filter((item: any) =>
-          (item.poster || item.poster_path) && (item.imdb_id || item.tmdb_id || item.id)
-        );
-        const mappedSearch = {
-          Search: validResults.map(mapToMovie),
-          totalResults: data.total_results?.toString() || validResults.length.toString(),
-          Response: 'True'
-        };
-        cache[cacheKey] = mappedSearch;
-        return mappedSearch;
-      }
-    } catch (err) {
-      console.warn(`[v0] Trending fetch failed for ${remote}:`, err);
+    if (data.results?.length > 0) {
+      const items = data.results
+        .filter((i: any) => i.media_type !== 'person' && i.poster_path)
+        .map(mapTmdbItem);
+
+      const result: SearchResult = {
+        Search: items,
+        totalResults: data.total_results?.toString() || items.length.toString(),
+        Response: 'True'
+      };
+      cache[cacheKey] = result;
+      return result;
     }
+    return { Search: [], totalResults: '0', Response: 'False', Error: 'No trending movies found' };
+  } catch (error) {
+    console.error('[v0] Trending error:', error);
+    return { Search: [], totalResults: '0', Response: 'False', Error: 'Network error' };
   }
-
-  return { Search: [], totalResults: '0', Response: 'False', Error: 'No trending movies found!' };
 }
 
 export async function getMovieDetails(id: string): Promise<Movie | null> {
   const cacheKey = `movie-${id}`;
-
-  if (cache[cacheKey]) {
-    console.log('[v0] Using cached details for:', id);
-    return cache[cacheKey];
-  }
+  if (cache[cacheKey]) return cache[cacheKey];
 
   try {
     console.log('[v0] Fetching details for:', id);
-
-    // Determine if it's an IMDB ID or TMDB ID
     const isImdb = id.startsWith('tt');
-    const param = isImdb ? `imdb_id=${id}` : `tmdb_id=${id}`;
+    const isTmdbFake = id.startsWith('tmdb-');
 
-    // Try primary source (2embed/TMDB)
-    const response = await fetch(`/api/proxy?endpoint=movie&${param}&remote=2embedapi`);
-    if (response.ok) {
-      const data = await response.json();
-      if (data && data.title) {
-        const mappedMovie: Movie = {
-          imdbID: data.imdb_id || data.tmdb_id?.toString() || id,
-          Title: data.title,
-          Year: data.year || data.release_date?.substring(0, 4) || 'N/A',
-          Rated: data.certification || 'N/A',
-          Released: data.release_date || 'N/A',
-          Runtime: data.runtime ? `${data.runtime} min` : 'N/A',
-          Genre: data.genres?.join(', ') || 'N/A',
-          Director: data.cast_crew?.crew?.find((c: any) => c.job === 'Director')?.name || 'N/A',
-          Writer: data.cast_crew?.crew?.find((c: any) => c.department === 'Writing')?.name || 'N/A',
-          Actors: data.cast_crew?.cast?.slice(0, 4).map((c: any) => c.name).join(', ') || 'N/A',
-          Plot: data.plot || data.overview || 'N/A',
-          Language: data.original_language || 'N/A',
-          Country: data.production_countries?.join(', ') || 'N/A',
-          Awards: 'N/A',
-          Poster: data.poster && data.poster !== 'N/A' ? data.poster : 'N/A',
-          Ratings: [{ Source: 'TMDB', Value: `${data.vote_average}/10` }],
-          Metascore: 'N/A',
-          imdbRating: data.vote_average?.toString() || 'N/A',
-          imdbVotes: data.vote_count?.toString() || 'N/A',
-          Type: 'movie',
-          Response: 'True'
-        };
-        cache[cacheKey] = mappedMovie;
-        return mappedMovie;
+    let data: any = null;
+
+    if (isImdb) {
+      // Try TMDB find by IMDB ID
+      const res = await fetch(`/api/proxy?endpoint=movie&imdb_id=${id}&remote=tmdb`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && (json.title || json.name)) data = json;
+      }
+
+      // Fallback to OMDb
+      if (!data && API_KEY) {
+        console.log('[v0] TMDB failed, falling back to OMDb for:', id);
+        const omdbRes = await fetch(`/api/proxy?remote=omdb&apikey=${API_KEY}&i=${id}&plot=full`);
+        if (omdbRes.ok) {
+          const omdbData = await omdbRes.json();
+          if (omdbData.Response === 'True') {
+            cache[cacheKey] = omdbData;
+            return omdbData as Movie;
+          }
+        }
+      }
+    } else if (isTmdbFake) {
+      // Numeric TMDB id stored as "tmdb-{id}"
+      const tmdbId = id.replace('tmdb-', '');
+      const res = await fetch(`/api/proxy?endpoint=movie&tmdb_id=${tmdbId}&remote=tmdb`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && (json.title || json.name)) data = json;
       }
     }
 
-    // Fallback to OMDb if primary fails and we have an IMDB ID
-    if (isImdb && API_KEY) {
-      console.log('[v0] TMDB failed, falling back to OMDb for:', id);
-      const omdbResponse = await fetch(`/api/proxy?remote=omdb&apikey=${API_KEY}&i=${id}&plot=full`);
-      if (omdbResponse.ok) {
-        const omdbData = await omdbResponse.json();
-        if (omdbData.Response === 'True') {
-          cache[cacheKey] = omdbData;
-          return omdbData as Movie;
-        }
-      }
+    if (data) {
+      const isTV = data._type === 'tv' || data.name;
+      const imdbId = data._imdb_id || data.external_ids?.imdb_id || data.imdb_id || id;
+      const genres = data.genres?.map((g: any) => g.name).join(', ') || 'N/A';
+      const director = data.credits?.crew?.find((c: any) => c.job === 'Director')?.name || 'N/A';
+      const actors = data.credits?.cast?.slice(0, 4).map((c: any) => c.name).join(', ') || 'N/A';
+
+      const mapped: Movie = {
+        imdbID: imdbId,
+        Title: data.title || data.name || 'N/A',
+        Year: (data.release_date || data.first_air_date || '').substring(0, 4) || 'N/A',
+        Rated: data.adult ? 'R' : 'N/A',
+        Released: data.release_date || data.first_air_date || 'N/A',
+        Runtime: data.runtime ? `${data.runtime} min` : (data.episode_run_time?.[0] ? `${data.episode_run_time[0]} min` : 'N/A'),
+        Genre: genres,
+        Director: director,
+        Writer: 'N/A',
+        Actors: actors,
+        Plot: data.overview || 'N/A',
+        Language: data.original_language?.toUpperCase() || 'N/A',
+        Country: data.production_countries?.map((c: any) => c.name).join(', ') || 'N/A',
+        Awards: 'N/A',
+        Poster: getPosterUrl(data.poster_path),
+        Ratings: [{ Source: 'TMDB', Value: `${data.vote_average?.toFixed(1)}/10` }],
+        Metascore: 'N/A',
+        imdbRating: data.vote_average?.toFixed(1) || 'N/A',
+        imdbVotes: data.vote_count?.toString() || 'N/A',
+        Type: isTV ? 'series' : 'movie',
+        Response: 'True'
+      };
+      cache[cacheKey] = mapped;
+      return mapped;
     }
 
     console.warn('[v0] All detail sources failed for:', id);

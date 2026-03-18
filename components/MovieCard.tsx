@@ -65,13 +65,22 @@ export const MovieCard: React.FC<MovieCardProps> = ({ imdbID, title, poster, yea
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               draggable={false}
               onError={(e) => {
+                // Replace broken image with a styled no-poster div (no external dependency)
                 const target = e.target as HTMLImageElement;
-                target.src = 'https://via.placeholder.com/300x450/1a3a3a/ffffff?text=No+Poster';
+                const parent = target.parentElement;
+                if (parent) {
+                  target.style.display = 'none';
+                  const placeholder = document.createElement('div');
+                  placeholder.className = 'w-full h-full flex flex-col items-center justify-center gap-2 bg-[#1a3a3a] text-white/40 text-[10px] font-bold uppercase tracking-widest text-center px-2';
+                  placeholder.innerHTML = `<svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg><span>${title.substring(0, 20)}</span>`;
+                  parent.appendChild(placeholder);
+                }
               }}
             />
           ) : (
-            <div className="w-full h-full bg-gray-200 dark:bg-white/5 flex items-center justify-center text-gray-400 dark:text-gray-600 font-bold uppercase text-[10px] sm:text-xs tracking-widest text-center px-2">
-              {title}
+            <div className="w-full h-full bg-[#1a3a3a] flex flex-col items-center justify-center gap-2 text-white/30 text-[10px] font-bold uppercase tracking-widest text-center px-2">
+              <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg>
+              <span>{title.substring(0, 20)}</span>
             </div>
           )}
 
