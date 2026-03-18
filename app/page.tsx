@@ -59,22 +59,21 @@ function HomeContent() {
     setIsLoading(true);
     try {
       console.log('[v0] Loading popular movies...');
-      // Use different time windows to get varied content for each carousel row
       const [popularRes, actionRes, trendingRes, scifiRes] = await Promise.all([
         getTrendingMovies('day', 1),
-        getTrendingMovies('week', 2), // page 2 for variety
+        getTrendingMovies('week', 1),
         getTrendingMovies('month', 1),
-        getTrendingMovies('week', 3), // page 3 for variety
+        searchMovies('Sci-Fi')
       ]);
 
       if (window.location.pathname !== '/') return;
 
-      if (popularRes.Search && popularRes.Search.length > 0) setPopularMovies(popularRes.Search.slice(0, 12));
-      if (actionRes.Search && actionRes.Search.length > 0) setActionMovies(actionRes.Search.slice(0, 12));
-      if (trendingRes.Search && trendingRes.Search.length > 0) setTrendingMovies(trendingRes.Search.slice(0, 12));
-      if (scifiRes.Search && scifiRes.Search.length > 0) setScifiMovies(scifiRes.Search.slice(0, 12));
+      if (popularRes.Search) setPopularMovies(popularRes.Search.slice(0, 12));
+      if (actionRes.Search) setActionMovies(actionRes.Search.slice(0, 12));
+      if (trendingRes.Search) setTrendingMovies(trendingRes.Search.slice(0, 12));
+      if (scifiRes.Search) setScifiMovies(scifiRes.Search.slice(0, 12));
 
-      const featuredBase = popularRes.Search?.[0] || actionRes.Search?.[0];
+      const featuredBase = popularRes.Search?.[0] || actionRes.Search?.[0] || trendingRes.Search?.[0];
       if (featuredBase) {
         console.log('[v0] Fetching details for featured movie:', featuredBase.Title);
         const topCandidates = popularRes.Search?.slice(0, 5) || [];
