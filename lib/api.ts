@@ -46,14 +46,18 @@ export interface SearchResult {
 // Cache to minimize API calls
 const cache: { [key: string]: any } = {};
 
-// Helper to map 2embed movie to our existing Movie/Search format
+// Helper to map 2embed/TMDB movie to our existing Movie/Search format
 const mapToMovie = (item: any) => {
-  const id = item.imdb_id || item.tmdb_id?.toString();
+  const id = item.imdb_id || item.tmdb_id?.toString() || item.id?.toString();
+  // 2embed API returns `poster`, TMDB raw API returns `poster_path` with a base URL
+  const poster = item.poster
+    || (item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null)
+    || 'N/A';
   return {
     imdbID: id || '',
     Title: item.title || item.name || '',
     Year: item.year || item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4) || '',
-    Poster: item.poster || 'N/A',
+    Poster: poster,
     Type: item.title ? 'movie' : 'series',
   };
 };
