@@ -67,21 +67,52 @@ export async function searchMovies(query: string, page: number = 1): Promise<Sea
   }
 
   try {
-    console.log('[v0] Searching for:', query);
-    // 2embed has separate endpoints for movie/tv. We'll default to search for movies
-    const url = `/api/proxy?endpoint=search&q=${encodeURIComponent(query)}&page=${page}`;
+    console.log('[v0] Hybrid searching for:', query);
+    
+    // Fetch from both sources in parallel
+    const [tmdbRes, omdbRes] = await Promise.allSettled([
+      fetch(`/api/proxy?endpoint=search&q=${encodeURIComponent(query)}&page=${page}&remote=2embed`).then(r => r.json()),
+      fetch(`/api/proxy?remote=omdb&apikey=${API_KEY}&s=${encodeURIComponent(query)}&page=${page}`).then(r => r.json())
+    ]);
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch');
-    const data = await response.json();
+    let combinedResults: any[] = [];
+    let totalResults = 0;
 
-    if (data.results && data.results.length > 0) {
-      const validResults = data.results.filter((item: any) =>
-        item.poster && item.poster !== 'N/A' && (item.imdb_id || item.tmdb_id)
-      );
+    // Process TMDB results
+    if (tmdbRes.status === 'fulfilled' && tmdbRes.value.results) {
+      combinedResults.push(...tmdbRes.value.results.map(mapToMovie));
+      totalResults += parseInt(tmdbRes.value.total_results || '0');
+    }
+
+    // Process OMDb results
+    if (omdbRes.status === 'fulfilled' && omdbRes.value.Search) {
+      combinedResults.push(...omdbRes.value.Search);
+      totalResults += parseInt(omdbRes.value.totalResults || '0');
+    }
+
+    // Deduplicate and filter
+    if (combinedResults.length > 0) {
+      const seen = new Set();
+      const deduplicated = combinedResults.filter(item => {
+        // Primary key: imdbID
+        const idKey = item.imdbID;
+        // Secondary key: Normalized Title + Year (for fuzzy matching when IDs differ)
+        const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const fuzzyKey = `${normalize(item.Title)}-${item.Year}`;
+
+        if (idKey && idKey !== 'N/A' && seen.has(idKey)) return false;
+        if (seen.has(fuzzyKey)) return false;
+
+        if (idKey && idKey !== 'N/A') seen.add(idKey);
+        seen.add(fuzzyKey);
+        
+        // Filter out items without posters or valid IDs
+        return item.Poster && item.Poster !== 'N/A' && item.imdbID;
+      });
+
       const mappedSearch = {
-        Search: validResults.map(mapToMovie),
-        totalResults: data.total_results?.toString() || validResults.length.toString(),
+        Search: deduplicated,
+        totalResults: totalResults.toString(),
         Response: 'True'
       };
       cache[cacheKey] = mappedSearch;

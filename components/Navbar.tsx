@@ -3,8 +3,16 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Search, Bell, User, Settings as SettingsIcon, Heart } from 'lucide-react';
+import { Menu, X, Search, Bell, User, Settings as SettingsIcon, Heart, Award } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
+import { StatsPanel } from './StatsPanel';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 
 const categories = ['All', 'Movies', 'Popular'];
 
@@ -19,6 +27,7 @@ export const Navbar: React.FC = () => {
     setIsOpen(false);
     if (category === 'All') {
       router.push('/');
+      window.dispatchEvent(new CustomEvent('reset-home'));
     } else {
       router.push(`/?category=${category}`);
     }
@@ -35,6 +44,7 @@ export const Navbar: React.FC = () => {
             onClick={() => {
               setActiveCategory('All');
               setIsOpen(false);
+              window.dispatchEvent(new CustomEvent('reset-home'));
             }}
           >
             <h1 className="text-2xl font-bold text-white hover:opacity-80 transition-opacity">
@@ -94,15 +104,29 @@ export const Navbar: React.FC = () => {
             onClick={() => {
               setActiveCategory('All');
               setIsOpen(false);
+              window.dispatchEvent(new CustomEvent('reset-home'));
             }}
           >
             <span className="text-[#2d5a5a]">m</span>ovies
           </Link>
 
-          <div className="flex items-center gap-2">
-            <button className="p-2 dark:text-white">
-              <Bell size={20} />
-            </button>
+          <div className="flex items-center gap-1">
+            <Sheet>
+              <SheetTrigger asChild>
+                <button className="p-2 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
+                  <Award size={20} className="text-[#2d5a5a] dark:text-teal-400" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="p-0 border-l dark:border-white/10 w-full sm:max-w-md bg-transparent">
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Admin & Statistics</SheetTitle>
+                </SheetHeader>
+                <div className="h-full overflow-y-auto bg-gray-50 dark:bg-[#0d1f1f]">
+                  <StatsPanel className="min-h-full" />
+                </div>
+              </SheetContent>
+            </Sheet>
+
             <button 
               className="p-2 dark:text-white"
               onClick={() => setIsSettingsOpen(true)}

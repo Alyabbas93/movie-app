@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { WatchlistProvider } from '@/lib/WatchlistContext'
@@ -12,9 +11,6 @@ export const viewport: Viewport = {
   userScalable: true,
   themeColor: '#1a3a3a',
 }
-
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'Movies - Discover Your Next Favorite Film',

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
+import { Play } from 'lucide-react';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { SearchBar } from '@/components/SearchBar';
@@ -21,7 +22,9 @@ interface SearchMovie {
   imdbRating?: string;
 }
 
-export default function Home() {
+import { Suspense } from 'react';
+
+function HomeContent() {
   const { watchlist, addToWatchlist } = useWatchlist();
   const [featuredMovie, setFeaturedMovie] = useState<Movie | null>(null);
   const [prevMovie, setPrevMovie] = useState<Movie | null>(null);
@@ -149,8 +152,19 @@ export default function Home() {
         setScifiMovies([]);
         setTrendingMovies([]);
         setHasMore(false);
-      }
+      } else {
+        const res = await searchMovies(cat, page);
 
+        if (window.location.pathname !== '/') return;
+
+        if (res.Search) {
+          setPopularMovies(prev => page === 1 ? res.Search : [...prev, ...res.Search]);
+          setHasMore(res.Search.length > 0);
+        }
+        setActionMovies([]);
+        setScifiMovies([]);
+        setTrendingMovies([]);
+      }
       if (page === 1) {
         let featuredCandidate: any = null;
         if (cat === 'Movies') {
@@ -185,6 +199,8 @@ export default function Home() {
     if (pathname !== '/') return;
 
     if (category === 'All') {
+      setHasSearched(false);
+      setSearchResults([]);
       loadPopularMovies();
       setHasMore(false);
     } else {
@@ -205,6 +221,18 @@ export default function Home() {
       animatePageIn(containerRef.current);
     }
   }, [isLoading]);
+
+  // Listen for reset-home event from Navbar
+  useEffect(() => {
+    const handleReset = () => {
+      setHasSearched(false);
+      setSearchResults([]);
+      setPopularMovies([]);
+      loadPopularMovies();
+    };
+    window.addEventListener('reset-home', handleReset);
+    return () => window.removeEventListener('reset-home', handleReset);
+  }, []);
 
   // Auto-rotate banner every 3.5 seconds — conveyor belt style
   useEffect(() => {
@@ -285,47 +313,60 @@ export default function Home() {
                               backgroundImage: movie.Poster && movie.Poster !== 'N/A' ? `url('${movie.Poster}')` : 'none',
                               backgroundSize: 'cover',
                               backgroundPosition: 'center',
-                              filter: 'brightness(0.38)',
+                              filter: 'brightness(0.6)',
                             }} />
-                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(26,58,58,0.95) 0%, transparent 80%)' }} className="md:bg-gradient-to-r md:from-[rgba(26,58,58,0.85)] md:to-transparent" />
-                            {/* Content */}
-                            <div className="relative z-10 text-white max-w-xl px-6 py-8 md:px-12 md:py-8">
-                              <h1 className="text-2xl md:text-5xl font-bold mb-2 md:mb-3 leading-tight text-white drop-shadow-lg">{movie.Title}</h1>
-                              <div className="flex gap-3 md:gap-4 mb-3 text-xs md:text-sm opacity-90 text-white/90 font-medium">
-                                <span className="flex items-center gap-1">⭐ {movie.imdbRating || 'N/A'}</span>
-                                <span>{movie.Runtime || ''}</span>
-                                <span>{movie.Released ? new Date(movie.Released).getFullYear() : movie.Year || ''}</span>
-                              </div>
-                              <p className="text-xs md:text-sm opacity-80 line-clamp-2 md:line-clamp-3 mb-4 md:mb-6 text-white/80 max-w-sm">{movie.Plot || ''}</p>
-                              {i === 0 && (
-                                <div className="flex flex-wrap gap-2 md:gap-3 mb-4">
+
+                            {/* Info overlay */}
+                            <div className="relative z-10 p-6 md:p-12 w-full">
+                              <div className="flex flex-col gap-2 md:gap-4 max-w-2xl">
+                                <div className="flex items-center gap-2">
+                                  <span className="bg-[#2d5a5a] text-white text-[10px] font-bold px-2 py-0.5 rounded tracking-widest uppercase">
+                                    Featured
+                                  </span>
+                                  <span className="text-xs text-white/70 font-medium">
+                                    {movie.Year} • {movie.Runtime}
+                                  </span>
+                                </div>
+                                <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-none drop-shadow-lg">
+                                  {movie.Title}
+                                </h1>
+                                <p className="text-white/80 text-sm md:text-base line-clamp-2 md:line-clamp-3 leading-relaxed max-w-xl">
+                                  {movie.Plot}
+                                </p>
+                                <div className="flex items-center gap-4 mt-2">
                                   <Link
                                     href={`/movie/${movie.imdbID}`}
-                                    className="px-5 py-2 md:px-6 md:py-2.5 bg-white text-[#1a3a3a] rounded-lg font-bold hover:bg-teal-50 transition-all text-xs md:text-sm shadow-md active:scale-95"
+                                    className="px-6 py-2.5 bg-white text-[#1a3a3a] rounded-lg font-bold flex items-center gap-2 hover:bg-[#2d5a5a] hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-lg"
                                   >
-                                    ▶ Watch Now
+                                    <Play size={18} fill="currentColor" />
+                                    Watch Now
                                   </Link>
                                   <button
-                                    onClick={() => addToWatchlist({ imdbID: movie.imdbID, title: movie.Title, poster: movie.Poster, year: movie.Released || movie.Year, type: 'movie' })}
-                                    className="px-5 py-2 md:px-6 md:py-2.5 border-2 border-white/50 text-white rounded-lg font-bold hover:bg-white/10 transition-all text-xs md:text-sm backdrop-blur-sm active:scale-95"
+                                    onClick={() => addToWatchlist({
+                                      imdbID: movie.imdbID,
+                                      title: movie.Title,
+                                      poster: movie.Poster,
+                                      year: movie.Year,
+                                      type: 'movie'
+                                    })}
+                                    className="px-6 py-2.5 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-lg font-bold hover:bg-white/20 transition-all transform hover:scale-105 active:scale-95"
                                   >
-                                    + Add to List
+                                    + Watchlist
                                   </button>
                                 </div>
-                              )}
-                              {i === 0 && featuredMovies.length > 1 && (
-                                <div className="flex gap-2">
-                                  {featuredMovies.map((_, di) => (
-                                    <button
-                                      key={di}
-                                      onClick={(e) => { e.preventDefault(); if (!isSliding) { setFeaturedIndex(di); } }}
-                                      style={{ width: di === featuredIndex ? '20px' : '6px', height: '6px', borderRadius: '9999px', background: di === featuredIndex ? 'white' : 'rgba(255,255,255,0.35)', transition: 'all 0.3s ease' }}
-                                    />
-                                  ))}
-                                </div>
-                              )}
+                              </div>
                             </div>
                           </div>
+                        ))}
+                      </div>
+
+                      {/* Manual index dots */}
+                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                        {featuredMovies.map((_, i) => (
+                          <button
+                            key={i}
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${i === featuredIndex ? 'bg-white w-6' : 'bg-white/30'}`}
+                          />
                         ))}
                       </div>
                     </div>
@@ -334,16 +375,24 @@ export default function Home() {
               </>
             )}
 
-            {/* Search Results or Popular Movies */}
+            {/* Search Results Grid */}
             {hasSearched ? (
-              <div>
-                <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mb-6">Search Results</h2>
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Search Results</h2>
+                  <button
+                    onClick={() => { setHasSearched(false); setSearchResults([]); }}
+                    className="text-sm text-[#2d5a5a] hover:text-[#1a3a3a] font-medium"
+                  >
+                    Clear Results
+                  </button>
+                </div>
                 {isLoading ? (
-                  <SkeletonLoader count={8} />
+                  <SkeletonLoader type="card" count={8} />
                 ) : searchResults.length > 0 ? (
-                  <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
                     {searchResults.map((movie) => (
-                      <div key={movie.imdbID}>
+                      <div key={movie.imdbID} className="transform hover:scale-105 transition-transform duration-300">
                         <MovieCard
                           imdbID={movie.imdbID}
                           title={movie.Title}
@@ -355,14 +404,13 @@ export default function Home() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">No results found. Try a different search.</p>
+                  <div className="text-center py-20 bg-white dark:bg-[#1a3a3a] rounded-2xl border border-dashed border-gray-200 dark:border-white/10 transition-colors">
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">No results found. Try a different search term.</p>
                   </div>
                 )}
               </div>
             ) : (
               <>
-                {/* Popular Movies Carousel */}
                 {isLoading && popularMovies.length === 0 ? (
                   <SkeletonLoader type="carousel" />
                 ) : popularMovies.length > 0 ? (
@@ -426,9 +474,24 @@ export default function Home() {
           </div>
 
           {/* Right Section - Stats Panel */}
-          <StatsPanel />
+          <StatsPanel className="hidden lg:flex w-72" />
         </div>
       </div>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0d1f1f] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#2d5a5a] dark:border-teal-400 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Initializing App...</p>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
