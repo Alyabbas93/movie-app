@@ -23,6 +23,8 @@ export interface Movie {
   imdbVotes: string;
   Type: string;
   Response: string;
+  totalSeasons?: string;
+  seasons?: Array<{ season_number: number; episode_count: number; name: string }>;
 }
 
 export interface SearchResult {
@@ -51,8 +53,9 @@ const getPosterUrl = (path: string | null | undefined): string => {
 // Map a TMDB multi-search/trending result to our format
 const mapTmdbItem = (item: any) => {
   const isMovie = item.media_type === 'movie' || item.title;
+  const typeStr = isMovie ? 'movie' : 'tv';
   return {
-    imdbID: item.external_ids?.imdb_id || item.imdb_id || `tmdb-${item.id}`,
+    imdbID: item.external_ids?.imdb_id || item.imdb_id || `tmdb-${typeStr}-${item.id}`,
     Title: item.title || item.name || '',
     Year: (item.release_date || item.first_air_date || '').substring(0, 4),
     Poster: getPosterUrl(item.poster_path),
@@ -112,15 +115,15 @@ export async function searchMovies(query: string, page: number = 1): Promise<Sea
   }
 }
 
-export async function getTrendingMovies(timeWindow: 'day' | 'week' | 'month' = 'week', page: number = 1): Promise<SearchResult> {
+export async function getTrendingMovies(timeWindow: 'day' | 'week' | 'month' = 'week', page: number = 1, type: 'all' | 'movie' | 'tv' = 'all'): Promise<SearchResult> {
   // TMDB only has day/week trending — map month to week
   const tw = timeWindow === 'month' ? 'week' : timeWindow;
-  const cacheKey = `trending-${tw}-${page}`;
+  const cacheKey = `trending-${tw}-${type}-${page}`;
   if (cache[cacheKey]) return cache[cacheKey];
 
   try {
-    console.log(`[v0] Fetching trending (${tw})...`);
-    const res = await fetch(`/api/proxy?endpoint=trending&time_window=${tw}&page=${page}&remote=tmdb`);
+    console.log(`[v0] Fetching trending (${tw}, ${type})...`);
+    const res = await fetch(`/api/proxy?endpoint=trending&time_window=${tw}&page=${page}&type=${type}&remote=tmdb`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
@@ -153,76 +156,90 @@ export async function getMovieDetails(id: string): Promise<Movie | null> {
     const isImdb = id.startsWith('tt');
     const isTmdbFake = id.startsWith('tmdb-');
 
-    let data: any = null;
-
+    // For IMDB IDs: fire TMDB and OMDb in parallel for speed
     if (isImdb) {
-      // Try TMDB find by IMDB ID
-      const res = await fetch(`/api/proxy?endpoint=movie&imdb_id=${id}&remote=tmdb`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json && (json.title || json.name)) data = json;
+      const [tmdbResult, omdbResult] = await Promise.allSettled([
+        fetch(`/api/proxy?endpoint=movie&imdb_id=${id}&remote=tmdb`).then(r => r.ok ? r.json() : null),
+        API_KEY ? fetch(`/api/proxy?remote=omdb&apikey=${API_KEY}&i=${id}&plot=full`).then(r => r.ok ? r.json() : null) : Promise.resolve(null)
+      ]);
+
+      // Try TMDB first
+      const tmdbData = tmdbResult.status === 'fulfilled' ? tmdbResult.value : null;
+      if (tmdbData?.title || tmdbData?.name) {
+        const mapped = mapTmdbDetail(tmdbData, id);
+        cache[cacheKey] = mapped;
+        return mapped;
       }
 
-      // Fallback to OMDb
-      if (!data && API_KEY) {
-        console.log('[v0] TMDB failed, falling back to OMDb for:', id);
-        const omdbRes = await fetch(`/api/proxy?remote=omdb&apikey=${API_KEY}&i=${id}&plot=full`);
-        if (omdbRes.ok) {
-          const omdbData = await omdbRes.json();
-          if (omdbData.Response === 'True') {
-            cache[cacheKey] = omdbData;
-            return omdbData as Movie;
-          }
+      // Fall back to OMDb
+      const omdbData = omdbResult.status === 'fulfilled' ? omdbResult.value : null;
+      if (omdbData?.Response === 'True') {
+        cache[cacheKey] = omdbData;
+        return omdbData as Movie;
+      }
+
+      console.warn('[v0] All detail sources failed for:', id);
+      return null;
+    }
+
+    // For TMDB fake IDs  
+    if (isTmdbFake) {
+      const parts = id.split('-');
+      let type = 'movie';
+      let tmdbId = parts[1];
+      if (parts.length === 3) {
+        type = parts[1];
+        tmdbId = parts[2];
+      }
+      
+      const res = await fetch(`/api/proxy?endpoint=movie&tmdb_id=${tmdbId}&type=${type}&remote=tmdb`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.title || data?.name) {
+          const mapped = mapTmdbDetail(data, id);
+          cache[cacheKey] = mapped;
+          return mapped;
         }
       }
-    } else if (isTmdbFake) {
-      // Numeric TMDB id stored as "tmdb-{id}"
-      const tmdbId = id.replace('tmdb-', '');
-      const res = await fetch(`/api/proxy?endpoint=movie&tmdb_id=${tmdbId}&remote=tmdb`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json && (json.title || json.name)) data = json;
-      }
     }
 
-    if (data) {
-      const isTV = data._type === 'tv' || data.name;
-      const imdbId = data._imdb_id || data.external_ids?.imdb_id || data.imdb_id || id;
-      const genres = data.genres?.map((g: any) => g.name).join(', ') || 'N/A';
-      const director = data.credits?.crew?.find((c: any) => c.job === 'Director')?.name || 'N/A';
-      const actors = data.credits?.cast?.slice(0, 4).map((c: any) => c.name).join(', ') || 'N/A';
-
-      const mapped: Movie = {
-        imdbID: imdbId,
-        Title: data.title || data.name || 'N/A',
-        Year: (data.release_date || data.first_air_date || '').substring(0, 4) || 'N/A',
-        Rated: data.adult ? 'R' : 'N/A',
-        Released: data.release_date || data.first_air_date || 'N/A',
-        Runtime: data.runtime ? `${data.runtime} min` : (data.episode_run_time?.[0] ? `${data.episode_run_time[0]} min` : 'N/A'),
-        Genre: genres,
-        Director: director,
-        Writer: 'N/A',
-        Actors: actors,
-        Plot: data.overview || 'N/A',
-        Language: data.original_language?.toUpperCase() || 'N/A',
-        Country: data.production_countries?.map((c: any) => c.name).join(', ') || 'N/A',
-        Awards: 'N/A',
-        Poster: getPosterUrl(data.poster_path),
-        Ratings: [{ Source: 'TMDB', Value: `${data.vote_average?.toFixed(1)}/10` }],
-        Metascore: 'N/A',
-        imdbRating: data.vote_average?.toFixed(1) || 'N/A',
-        imdbVotes: data.vote_count?.toString() || 'N/A',
-        Type: isTV ? 'series' : 'movie',
-        Response: 'True'
-      };
-      cache[cacheKey] = mapped;
-      return mapped;
-    }
-
-    console.warn('[v0] All detail sources failed for:', id);
     return null;
   } catch (error) {
     console.error('[v0] Details fetch error:', error);
     return null;
   }
+}
+
+// Helper to map a TMDB detail response to our Movie format
+function mapTmdbDetail(data: any, originalId: string): Movie {
+  const isTV = data._type === 'tv' || (!data.title && data.name);
+  const imdbId = data._imdb_id || data.external_ids?.imdb_id || data.imdb_id || originalId;
+  const genres = data.genres?.map((g: any) => g.name).join(', ') || 'N/A';
+  const director = data.credits?.crew?.find((c: any) => c.job === 'Director')?.name || 'N/A';
+  const actors = data.credits?.cast?.slice(0, 4).map((c: any) => c.name).join(', ') || 'N/A';
+  return {
+    imdbID: imdbId,
+    Title: data.title || data.name || 'N/A',
+    Year: (data.release_date || data.first_air_date || '').substring(0, 4) || 'N/A',
+    Rated: 'N/A',
+    Released: data.release_date || data.first_air_date || 'N/A',
+    Runtime: data.runtime ? `${data.runtime} min` : (data.episode_run_time?.[0] ? `${data.episode_run_time[0]} min` : 'N/A'),
+    Genre: genres,
+    Director: director,
+    Writer: 'N/A',
+    Actors: actors,
+    Plot: data.overview || 'N/A',
+    Language: data.original_language?.toUpperCase() || 'N/A',
+    Country: data.production_countries?.map((c: any) => c.name).join(', ') || 'N/A',
+    Awards: 'N/A',
+    Poster: getPosterUrl(data.poster_path),
+    Ratings: [{ Source: 'TMDB', Value: `${data.vote_average?.toFixed(1)}/10` }],
+    Metascore: 'N/A',
+    imdbRating: data.vote_average?.toFixed(1) || 'N/A',
+    imdbVotes: data.vote_count?.toString() || 'N/A',
+    Type: isTV ? 'series' : 'movie',
+    Response: 'True',
+    totalSeasons: data.number_of_seasons?.toString() || 'N/A',
+    seasons: data.seasons || [],
+  };
 }

@@ -77,7 +77,8 @@ export async function GET(request: Request) {
             }
 
             if (endpoint === 'trending') {
-                const url = `${TMDB_BASE}/trending/all/${time_window}?api_key=${TMDB_API_KEY}&page=${page}`;
+                const type = searchParams.get('type') || 'all';
+                const url = `${TMDB_BASE}/trending/${type}/${time_window}?api_key=${TMDB_API_KEY}&page=${page}`;
                 const res = await fetchWithRetry(url, { headers: { 'Accept': 'application/json' } });
                 const data = await res.json();
                 return NextResponse.json(data);

@@ -14,7 +14,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 
-const categories = ['All', 'Movies', 'Popular'];
+const categories = ['All', 'Movies', 'Series', 'Popular'];
 
 export const Navbar: React.FC = () => {
   const router = useRouter();

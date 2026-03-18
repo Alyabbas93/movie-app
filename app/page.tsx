@@ -108,20 +108,14 @@ function HomeContent() {
     try {
       console.log(`[v0] Loading category: ${cat}, page: ${page}`);
       if (cat === 'Movies') {
-        const [movieRes, seriesRes] = await Promise.all([
-          getTrendingMovies('week', page),
-          searchMovies('TV Series', page)
+        const [movieRes] = await Promise.all([
+          getTrendingMovies('week', page, 'movie')
         ]);
 
         // Guard again after async await
         if (window.location.pathname !== '/') return;
 
-        const newResults = [
-          ...(movieRes.Search || []),
-          ...(seriesRes.Search || [])
-        ].filter((item, index, self) =>
-          index === self.findIndex((t) => t.imdbID === item.imdbID)
-        );
+        const newResults = movieRes.Search || [];
 
         setPopularMovies(prev => {
           const combined = page === 1 ? newResults : [...prev, ...newResults];
@@ -134,6 +128,18 @@ function HomeContent() {
         });
 
         setHasMore(newResults.length > 0);
+        setActionMovies([]);
+        setScifiMovies([]);
+        setTrendingMovies([]);
+      } else if (cat === 'Series') {
+        const res = await getTrendingMovies('week', page, 'tv');
+
+        if (window.location.pathname !== '/') return;
+
+        if (res.Search) {
+          setPopularMovies(prev => page === 1 ? res.Search : [...prev, ...res.Search]);
+          setHasMore(res.Search.length > 0);
+        }
         setActionMovies([]);
         setScifiMovies([]);
         setTrendingMovies([]);
@@ -169,8 +175,11 @@ function HomeContent() {
       if (page === 1) {
         let featuredCandidate: any = null;
         if (cat === 'Movies') {
-          const r = await getTrendingMovies('week', 1);
-          featuredCandidate = r.Search?.find(m => m.Type === 'movie') || r.Search?.[0];
+          const r = await getTrendingMovies('week', 1, 'movie');
+          featuredCandidate = r.Search?.[0];
+        } else if (cat === 'Series') {
+          const r = await getTrendingMovies('week', 1, 'tv');
+          featuredCandidate = r.Search?.[0];
         } else if (cat === 'Popular') {
           const r = await getTrendingMovies('day', 1);
           featuredCandidate = r.Search?.[0];
@@ -423,10 +432,12 @@ function HomeContent() {
                 {isLoading && popularMovies.length === 0 ? (
                   <SkeletonLoader type="carousel" />
                 ) : popularMovies.length > 0 ? (
-                  category === 'Movies' ? (
+                  category === 'Movies' || category === 'Series' ? (
                     <div className="space-y-6">
                       <div className="flex justify-between items-center">
-                        <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Available Content</h2>
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">
+                          {category === 'Series' ? 'TV Shows' : 'Movies'}
+                        </h2>
                         <span className="text-xs text-gray-500">{popularMovies.length} items</span>
                       </div>
                       <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
@@ -471,7 +482,7 @@ function HomeContent() {
                 ) : null}
 
                 {/* Additional Carousels (Only for All/Popular) */}
-                {!isLoading && category !== 'Movies' && (
+                {!isLoading && category !== 'Movies' && category !== 'Series' && (
                   <>
                     {actionMovies.length > 0 && <MoviesCarousel title={category === 'All' ? "Trending This Week" : "More Like This"} movies={actionMovies} />}
                     {scifiMovies.length > 0 && <MoviesCarousel title={category === 'All' ? "Sci-Fi & Fantasy" : "Featured Suggestions"} movies={scifiMovies} />}
