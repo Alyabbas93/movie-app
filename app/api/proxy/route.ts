@@ -35,22 +35,22 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3, ba
 }
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
+    const urlObj = new URL(request.url);
+    const searchParams = urlObj.searchParams;
     const endpoint = searchParams.get('endpoint');
-    const remote = searchParams.get('remote') || '2embed'; // Default to 2embed
-
-    if (!endpoint && remote !== 'omdb') {
-        return NextResponse.json({ error: 'Endpoint is required' }, { status: 400 });
-    }
+    const remote = searchParams.get('remote') || '2embed';
 
     // Whitelist allowed domains for security
     const remoteMap: { [key: string]: string } = {
-        '2embed': 'https://api.2embed.cc',
-        'omdb': 'https://www.omdbapi.com'
+        '2embed': 'https://www.2embed.cc', // Updated to www
+        '2embedapi': 'https://api.2embed.cc',
+        'omdb': 'https://www.omdbapi.com',
+        'multiembed': 'https://multiembed.mov'
     };
 
     const baseUrl = remoteMap[remote];
     if (!baseUrl) {
+        console.error(`[proxy] Blocked invalid remote: ${remote}`);
         return NextResponse.json({ error: 'Invalid remote source' }, { status: 400 });
     }
 
@@ -69,19 +69,20 @@ export async function GET(request: Request) {
             }
         });
 
-        console.log(`[proxy] Fetching from ${remote}: ${targetUrlObj.toString()}`);
+        console.log(`[proxy] Routing ${remote} -> ${targetUrlObj.host}${targetUrlObj.pathname}`);
 
         const response = await fetchWithRetry(targetUrlObj.toString(), {
             headers: {
                 'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             },
+            next: { revalidate: 3600 } // Cache for 1 hour on Vercel
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[proxy] Upstream error ${response.status}:`, errorText);
+            console.error(`[proxy] Upstream error ${response.status} from ${remote}`);
             return NextResponse.json(
-                { error: `Upstream API error: ${response.status}` },
+                { error: `Upstream API error: ${response.status} from ${remote}` },
                 { status: response.status }
             );
         }
@@ -89,14 +90,15 @@ export async function GET(request: Request) {
         const data = await response.json();
         return NextResponse.json(data);
     } catch (error: any) {
-        console.error('[proxy error]', error);
+        console.error(`[proxy error from ${remote}]`, error.message);
 
         const isTimeout = error.name === 'AbortError' || error.message?.includes('timeout');
 
         return NextResponse.json(
             {
-                error: isTimeout ? 'The movie database is taking too long to respond. Please try again.' : 'Failed to fetch data from the movie database.',
-                details: error.message
+                error: isTimeout ? 'The movie database is taking too long to respond.' : 'Failed to fetch data from the movie database.',
+                details: error.message,
+                remote: remote
             },
             { status: isTimeout ? 504 : 500 }
         );

@@ -1,11 +1,9 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React from 'react';
 import { MovieCard } from './MovieCard';
-import { animateCarouselScroll } from '@/lib/animations';
 
-interface Movie {
+interface SearchMovie {
   imdbID: string;
   Title: string;
   Poster: string;
@@ -15,61 +13,41 @@ interface Movie {
 
 interface MoviesCarouselProps {
   title: string;
-  movies: Movie[];
+  movies: SearchMovie[];
 }
 
 export const MoviesCarousel: React.FC<MoviesCarouselProps> = ({ title, movies }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = direction === 'left' ? -400 : 400;
-      const newPosition = scrollContainerRef.current.scrollLeft + scrollAmount;
-      animateCarouselScroll(scrollContainerRef.current, newPosition);
-    }
-  };
+  if (!movies || movies.length === 0) return null;
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white transition-colors">{title}</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={() => scroll('left')}
-            className="p-2 rounded-full bg-[#2d5a5a] text-white hover:bg-[#1a3a3a] transition-colors"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            className="p-2 rounded-full bg-[#2d5a5a] text-white hover:bg-[#1a3a3a] transition-colors"
-            aria-label="Scroll right"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white tracking-tight">
+          {title}
+        </h2>
+        <div className="h-[2px] flex-1 mx-6 bg-gradient-to-r from-[#2d5a5a] to-transparent opacity-20 hidden md:block" />
       </div>
 
-      <div
-        ref={scrollContainerRef}
-        className="flex gap-3 md:gap-4 overflow-x-auto scroll-smooth pb-4 px-1"
-        style={{ scrollBehavior: 'auto' }}
-      >
-        {movies.map((movie) => (
-          <div
-            key={movie.imdbID}
-            className="flex-shrink-0 w-36 sm:w-48 md:w-56"
-          >
-            <MovieCard
-              imdbID={movie.imdbID}
-              title={movie.Title}
-              poster={movie.Poster}
-              year={movie.Year}
-              rating={movie.imdbRating}
-            />
-          </div>
-        ))}
+      <div className="relative group">
+        <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 scrollbar-hide snap-x cursor-grab active:cursor-grabbing">
+          {movies.map((movie) => (
+            <div 
+              key={movie.imdbID} 
+              className="flex-shrink-0 w-[160px] xs:w-[180px] md:w-[220px] snap-start transform hover:scale-[1.02] transition-all duration-300"
+            >
+              <MovieCard
+                imdbID={movie.imdbID}
+                title={movie.Title}
+                poster={movie.Poster}
+                year={movie.Year}
+                rating={movie.imdbRating}
+              />
+            </div>
+          ))}
+        </div>
+        
+        {/* Subtle fade effect on the right for desktop */}
+        <div className="hidden md:block absolute top-0 right-0 h-full w-20 bg-gradient-to-l from-gray-50 dark:from-[#0d1f1f] to-transparent pointer-events-none z-10" />
       </div>
     </div>
   );
