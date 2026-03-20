@@ -16,7 +16,7 @@ interface MoviePageProps {
 const SERVERS = [
   { id: 'vidsrc', label: 'Server 1' },
   { id: '2embed', label: 'Server 2' },
-  { id: 'superembed', label: 'Server 3' },
+  { id: 'vidsrcpro', label: 'Server 3' },
 ] as const;
 
 type ServerId = typeof SERVERS[number]['id'];
@@ -24,26 +24,32 @@ type ServerId = typeof SERVERS[number]['id'];
 function buildEmbedUrl(serverId: ServerId, imdbId: string, type: string, season: number, episode: number): string {
   const isTV = type === 'series' || type === 'tv';
   let numericId = imdbId;
-  if (imdbId.startsWith('tmdb-')) {
+  const isTmdb = imdbId.startsWith('tmdb-');
+  
+  if (isTmdb) {
     const parts = imdbId.split('-');
     numericId = parts.length === 3 ? parts[2] : parts[1];
   }
 
+  // Pass either tt-id or numeric TMDB id directly. These sources auto-detect.
   switch (serverId) {
     case 'vidsrc':
+      // Server 1: vidsrc.me is very stable and doesn't block iframe referrers
       return isTV
-        ? `https://vidsrc.to/embed/tv/${numericId}/${season}/${episode}`
-        : `https://vidsrc.to/embed/movie/${numericId}`;
+        ? `https://vidsrc.me/embed/tv?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}&season=${season}&episode=${episode}`
+        : `https://vidsrc.me/embed/movie?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}`;
     case '2embed':
+      // Server 2: 2embed.stream
       return isTV
         ? `https://www.2embed.stream/embed/tv/${numericId}/${season}/${episode}`
         : `https://www.2embed.stream/embed/movie/${numericId}`;
-    case 'superembed':
+    case 'vidsrcpro':
+      // Server 3: vidsrc.pro (fallback CDN)
       return isTV
-        ? `https://multiembed.mov/?video_id=${numericId}&tmdb=${imdbId.startsWith('tmdb-') ? 1 : 0}&s=${season}&e=${episode}`
-        : `https://multiembed.mov/?video_id=${numericId}&tmdb=${imdbId.startsWith('tmdb-') ? 1 : 0}`;
+        ? `https://vidsrc.pro/embed/tv/${numericId}/${season}/${episode}`
+        : `https://vidsrc.pro/embed/movie/${numericId}`;
     default:
-      return `https://vidsrc.to/embed/movie/${numericId}`;
+      return `https://vidsrc.me/embed/movie/${numericId}`;
   }
 }
 
