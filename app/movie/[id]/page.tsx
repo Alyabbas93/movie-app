@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, use } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { MovieDetails } from '@/components/MovieDetails';
@@ -49,6 +50,7 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, type: string, season:
 }
 
 export default function MoviePage({ params }: MoviePageProps) {
+  const router = useRouter();
   const resolvedParams = use(params);
   const id = resolvedParams.id;
 
@@ -134,9 +136,12 @@ export default function MoviePage({ params }: MoviePageProps) {
         <Navbar />
         <div className="flex-1 md:ml-44 pt-16 md:pt-0 flex flex-col min-h-screen">
           <div className="flex-1 p-8">
-            <Link href="/" className="inline-flex items-center gap-2 text-[#2d5a5a] dark:text-teal-400 font-medium mb-8">
-              <ArrowLeft size={20} /> Back to Home
-            </Link>
+            <button
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-2 text-[#2d5a5a] dark:text-teal-400 font-medium mb-8"
+            >
+              <ArrowLeft size={20} /> Back
+            </button>
             <div className="text-center py-20">
               <p className="text-4xl mb-4">🎬</p>
               <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{error || 'Movie not found'}</p>
@@ -159,9 +164,12 @@ export default function MoviePage({ params }: MoviePageProps) {
       <Navbar />
       <div className="flex-1 md:ml-44 pt-0 flex flex-col min-h-screen">
         <div className="flex-1 p-4 md:p-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-[#2d5a5a] dark:text-teal-400 hover:text-[#1a3a3a] dark:hover:text-teal-300 font-medium mb-8 transition-colors">
-            <ArrowLeft size={20} /> Back to Home
-          </Link>
+          <button // Changed from Link to button
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-2 text-[#2d5a5a] dark:text-teal-400 hover:text-[#1a3a3a] dark:hover:text-teal-300 font-medium mb-8 transition-colors"
+          >
+            <ArrowLeft size={20} /> Back
+          </button>
 
           <MovieDetails
             title={movie.Title}

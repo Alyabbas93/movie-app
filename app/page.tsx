@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, usePathname } from 'next/navigation';
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { Play } from 'lucide-react';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
@@ -43,6 +43,7 @@ function HomeContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const category = searchParams.get('category') || 'All';
@@ -210,6 +211,9 @@ function HomeContent() {
     if (pathname !== '/') return;
 
     if (category === 'All') {
+      // If there is a search query, let the search effect handle it
+      if (queryParam) return;
+
       setHasSearched(false);
       setSearchResults([]);
       loadPopularMovies();
@@ -217,13 +221,13 @@ function HomeContent() {
     } else {
       loadCategoryMovies(category, currentPage);
     }
-  }, [category, currentPage, pathname]);
+  }, [category, currentPage, pathname, queryParam]);
 
   // Handle URL query parameter search
   useEffect(() => {
     if (pathname !== '/') return;
     if (queryParam) {
-      handleSearch(queryParam);
+      performSearch(queryParam);
     }
   }, [queryParam, pathname]);
 
@@ -269,6 +273,12 @@ function HomeContent() {
   }, [featuredMovies, featuredIndex]);
 
   const handleSearch = async (query: string) => {
+    if (query === queryParam) return;
+    // Update URL to persist search state - this will trigger the useEffect below
+    router.push(`/?q=${encodeURIComponent(query)}`);
+  };
+
+  const performSearch = async (query: string) => {
     setIsLoading(true);
     setHasSearched(true);
     try {
@@ -400,7 +410,11 @@ function HomeContent() {
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Search Results</h2>
                   <button
-                    onClick={() => { setHasSearched(false); setSearchResults([]); }}
+                    onClick={() => { 
+                      router.push('/');
+                      setHasSearched(false); 
+                      setSearchResults([]); 
+                    }}
                     className="text-sm text-[#2d5a5a] hover:text-[#1a3a3a] font-medium"
                   >
                     Clear Results

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Menu, X, Search, Bell, User, Settings as SettingsIcon, Heart, Award, Sun, Moon } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 import { StatsPanel } from './StatsPanel';
@@ -21,9 +21,16 @@ export const Navbar: React.FC = () => {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const queryParam = searchParams.get('q') || '';
   const [activeCategory, setActiveCategory] = useState('All');
-  const [mobileQuery, setMobileQuery] = useState('');
+  const [mobileQuery, setMobileQuery] = useState(queryParam);
   const { theme, toggleTheme } = useTheme();
+
+  // Use side effect for reactive sync
+  useEffect(() => {
+    setMobileQuery(queryParam);
+  }, [queryParam]);
 
   const handleCategoryClick = (category: string) => {
     setActiveCategory(category);
