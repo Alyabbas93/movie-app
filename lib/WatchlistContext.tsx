@@ -16,48 +16,42 @@ interface WatchlistContextType {
   removeFromWatchlist: (imdbID: string) => void;
   isInWatchlist: (imdbID: string) => boolean;
   watchlistCount: number;
-  currentUserId: string;
-  switchUser: (userId: string) => void;
 }
 
 const WatchlistContext = createContext<WatchlistContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'watchlist';
+
 export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUserId, setCurrentUserId] = useState<string>('1'); // Default to user 1
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load watchlist from localStorage whenever user switches or on mount
+  // Load watchlist from localStorage on mount
   useEffect(() => {
     try {
-      const storageKey = `watchlist_user_${currentUserId}`;
-      const saved = localStorage.getItem(storageKey);
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        setWatchlist(JSON.parse(saved));
-        console.log(`[v0] Watchlist loaded for user ${currentUserId}:`, JSON.parse(saved).length, 'items');
-      } else {
-        setWatchlist([]); // Empty for new user
-        console.log(`[v0] New watchlist initialized for user ${currentUserId}`);
+        const parsed = JSON.parse(saved);
+        setWatchlist(parsed);
+        console.log('[v0] Watchlist loaded:', parsed.length, 'items');
       }
     } catch (error) {
       console.error('[v0] Failed to load watchlist:', error);
-      setWatchlist([]);
     }
     setIsLoaded(true);
-  }, [currentUserId]);
+  }, []);
 
   // Save watchlist to localStorage whenever it changes
   useEffect(() => {
     if (isLoaded) {
       try {
-        const storageKey = `watchlist_user_${currentUserId}`;
-        localStorage.setItem(storageKey, JSON.stringify(watchlist));
-        console.log(`[v0] Watchlist saved for user ${currentUserId}:`, watchlist.length, 'items');
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(watchlist));
+        console.log('[v0] Watchlist saved:', watchlist.length, 'items');
       } catch (error) {
         console.error('[v0] Failed to save watchlist:', error);
       }
     }
-  }, [watchlist, isLoaded, currentUserId]);
+  }, [watchlist, isLoaded]);
 
   const addToWatchlist = (item: WatchlistItem) => {
     setWatchlist((prev) => {
@@ -84,12 +78,6 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return watchlist.some((i) => i.imdbID === imdbID);
   };
 
-  const switchUser = (userId: string) => {
-    console.log('[v0] Switching to user:', userId);
-    setIsLoaded(false); // Reset loaded state to trigger reload effect correctly
-    setCurrentUserId(userId);
-  };
-
   return (
     <WatchlistContext.Provider
       value={{
@@ -98,8 +86,6 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         removeFromWatchlist,
         isInWatchlist,
         watchlistCount: watchlist.length,
-        currentUserId,
-        switchUser,
       }}
     >
       {children}

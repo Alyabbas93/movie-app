@@ -1,97 +1,69 @@
-'use client';
-
-import { Heart, MessageCircle, Award, Settings as SettingsIcon, X, Trash2 } from 'lucide-react';
+import { Heart, Activity, TrendingUp, X, Film, Zap } from 'lucide-react';
 import Image from 'next/image';
 import { useWatchlist } from '@/lib/WatchlistContext';
 
 interface StatsPanelProps {
-  watchTime?: string;
-  subscription?: string;
-  comments?: number;
-  users?: Array<{ id: string; name: string; avatar: string }>;
   className?: string;
 }
 
 export const StatsPanel: React.FC<StatsPanelProps> = ({
-  watchTime = '130',
-  subscription = 'Pro',
-  comments = 12,
-  users = [
-    { id: '1', name: 'User 1', avatar: '' },
-    { id: '2', name: 'User 2', avatar: '' },
-    { id: '3', name: 'User 3', avatar: '' },
-  ],
   className = '',
 }) => {
-  const { watchlist, removeFromWatchlist, currentUserId, switchUser } = useWatchlist();
+  const { watchlist, removeFromWatchlist } = useWatchlist();
 
-  // For visual variety, let's make stats "user-specific" placeholders
-  const getStats = (userId: string) => {
-    const seed = parseInt(userId) || 1;
-    return {
-      time: `${seed * 45 + watchlist.length * 2}h`,
-      points: seed * 150 + watchlist.length * 10,
-      sub: seed % 2 === 0 ? 'Basic' : 'Pro',
-      comm: seed * 5 + 2
-    };
-  };
-
-  const userStats = getStats(currentUserId);
+  const trendingGenres = [
+    { name: 'Action', color: 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400' },
+    { name: 'Sci-Fi', color: 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400' },
+    { name: 'Horror', color: 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400' },
+    { name: 'Comedy', color: 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400' },
+  ];
 
   return (
-    <aside className={`flex flex-col bg-white dark:bg-[#1a3a3a] rounded-2xl p-6 space-y-8 border-none flex-none shadow-none drop-shadow-none ring-0 outline-none hover:shadow-none hover:ring-0 ${className}`}>
-      {/* Stats Section */}
-      <div>
-        <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
-          <Award size={18} className="text-[#2d5a5a] dark:text-teal-400" />
-          My Activity (User {currentUserId})
+    <aside className={`flex flex-col bg-white dark:bg-[#1a3a3a] rounded-2xl p-6 space-y-8 border-none flex-none shadow-none drop-shadow-none ring-0 outline-none hover:shadow-none hover:ring-0 transition-all duration-300 ${className}`}>
+      {/* Cinema Insights Section */}
+      <div className="space-y-6">
+        <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+          <Activity size={18} className="text-[#2d5a5a] dark:text-teal-400" />
+          Cinema Insights
         </h3>
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-1">
-            <p className="text-2xl font-black text-gray-900 dark:text-white">{userStats.time}</p>
-            <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">Watch time</p>
+        <div className="grid grid-cols-1 gap-4">
+          <div className="p-4 rounded-xl bg-gray-50 dark:bg-[#0d1f1f] border border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-1">
+              <Film size={14} className="text-gray-400" />
+              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">Movies Served</p>
+            </div>
+            <p className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">1.8M<span className="text-[#2d5a5a] dark:text-teal-400">+</span></p>
           </div>
-          <div className="space-y-1">
-            <p className="text-2xl font-black text-gray-900 dark:text-white">{watchlist.length}</p>
-            <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">Watchlist</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xl font-black text-[#2d5a5a] dark:text-teal-400">{userStats.sub}</p>
-            <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">Membership</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-2xl font-black text-gray-900 dark:text-white">{userStats.comm}</p>
-            <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">Comments</p>
+          <div className="p-4 rounded-xl bg-gray-50 dark:bg-[#0d1f1f] border border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-1">
+              <Zap size={14} className="text-amber-500" />
+              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">Active Watchers</p>
+            </div>
+            <p className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">5,241</p>
           </div>
         </div>
       </div>
 
-      {/* Profile Switching Section */}
-      <div>
-        <h3 className="text-[10px] uppercase tracking-widest font-bold text-gray-400 dark:text-gray-500 mb-4">Switch Profile</h3>
-        <div className="flex items-center gap-3">
-          {users.map((user) => (
-            <button
-              key={user.id}
-              onClick={() => switchUser(user.id)}
-              className={`relative w-11 h-11 rounded-full border-2 transition-all p-0.5 overflow-hidden ${currentUserId === user.id ? 'border-[#2d5a5a] dark:border-teal-400 scale-110 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'
-                }`}
+      {/* Trending Genres Section */}
+      <div className="space-y-4">
+        <h3 className="text-[10px] uppercase tracking-widest font-bold text-gray-400 dark:text-gray-500 flex items-center gap-2">
+          <TrendingUp size={14} />
+          Trending Genres
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {trendingGenres.map((genre) => (
+            <span
+              key={genre.name}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${genre.color.split(' ')[0]} ${genre.color.split(' ')[1]}`}
             >
-              <div className={`w-full h-full rounded-full bg-gradient-to-br flex items-center justify-center text-xs font-bold text-white ${user.id === '1' ? 'from-indigo-500 to-purple-500' :
-                  user.id === '2' ? 'from-emerald-500 to-teal-500' :
-                    'from-orange-500 to-red-500'
-                }`}>
-                {user.avatar ? (
-                  <Image src={user.avatar} alt={user.name} width={40} height={40} className="w-full h-full object-cover" />
-                ) : user.name[0]}
-              </div>
-            </button>
+              {genre.name}
+            </span>
           ))}
         </div>
       </div>
 
       {/* Watchlist Section */}
-      <div>
+      <div className="flex-1">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
             <Heart size={18} className="text-red-500 fill-red-500/10" />
@@ -119,10 +91,13 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
                     {item.title}
                   </div>
                 )}
-                {/* Remove button */}
+                {/* Remove button - Always visible on mobile, hover on desktop */}
                 <button
-                  onClick={() => removeFromWatchlist(item.imdbID)}
-                  className="absolute top-1.5 right-1.5 p-1.5 bg-black/60 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    removeFromWatchlist(item.imdbID);
+                  }}
+                  className="absolute top-1.5 right-1.5 p-1.5 bg-black/60 text-white rounded-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-red-500 z-10"
                   title="Remove from watchlist"
                 >
                   <X size={12} strokeWidth={3} />
@@ -136,25 +111,6 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
             <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-1">Start adding movies!</p>
           </div>
         )}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="flex justify-between items-center pt-6 border-t border-gray-100 dark:border-white/10">
-        {[
-          { icon: Heart, label: 'Favs', color: 'text-red-500' },
-          { icon: MessageCircle, label: 'Chat', color: 'text-blue-500' },
-          { icon: Award, label: 'Win', color: 'text-amber-500' },
-          { icon: SettingsIcon, label: 'Set', color: 'text-gray-500' }
-        ].map((item, i) => (
-          <button
-            key={i}
-            className="flex flex-col items-center gap-1 group"
-          >
-            <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 text-gray-400 group-hover:bg-[#2d5a5a]/10 group-hover:text-[#2d5a5a] dark:group-hover:text-teal-400 transition-all">
-              <item.icon size={18} />
-            </div>
-          </button>
-        ))}
       </div>
     </aside>
   );

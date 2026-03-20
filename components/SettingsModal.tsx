@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Moon, Sun, Monitor, Globe, Shield, User } from 'lucide-react';
+import { X, Moon, Sun, Monitor, Globe, Shield } from 'lucide-react';
 import { useTheme } from '@/lib/ThemeContext';
 import { useWatchlist } from '@/lib/WatchlistContext';
 
@@ -12,7 +12,7 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { theme, setTheme } = useTheme();
-  const { currentUserId, switchUser } = useWatchlist();
+  const { watchlist } = useWatchlist();
   const [adultFilter, setAdultFilter] = useState(false);
   const [language, setLanguage] = useState('English');
 
@@ -56,31 +56,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <span className="text-xs font-semibold">{t.label}</span>
                 </button>
               ))}
-            </div>
-          </section>
-
-          {/* Account/Profile */}
-          <section className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Profile</h3>
-            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#2d5a5a] flex items-center justify-center text-white font-bold">
-                  {currentUserId}
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-800 dark:text-white">User {currentUserId}</p>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Active Profile</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => {
-                  const nextId = currentUserId === '1' ? '2' : currentUserId === '2' ? '3' : '1';
-                  switchUser(nextId);
-                }}
-                className="text-xs font-bold text-[#2d5a5a] dark:text-teal-400 hover:underline"
-              >
-                Switch
-              </button>
             </div>
           </section>
 
