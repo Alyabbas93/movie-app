@@ -24,10 +24,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark');
       }
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      // Default to system preference
-      setThemeState('dark');
-      document.documentElement.classList.add('dark');
+    } else {
+      // ALWAYS default to light mode explicitly
+      setThemeState('light');
+      document.documentElement.classList.remove('dark');
     }
     setIsMounted(true);
   }, []);

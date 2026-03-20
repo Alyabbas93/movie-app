@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Search, Bell, User, Settings as SettingsIcon, Heart, Award } from 'lucide-react';
+import { Menu, X, Search, Bell, User, Settings as SettingsIcon, Heart, Award, Sun, Moon } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 import { StatsPanel } from './StatsPanel';
 import {
@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { useTheme } from '@/lib/ThemeContext';
 
 const categories = ['All', 'Movies', 'Series', 'Popular'];
 
@@ -22,6 +23,7 @@ export const Navbar: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
   const [mobileQuery, setMobileQuery] = useState('');
+  const { theme, toggleTheme } = useTheme();
 
   const handleCategoryClick = (category: string) => {
     setActiveCategory(category);
@@ -36,6 +38,18 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
+      {/* Desktop Theme Toggle (Floating Top Right) */}
+      <button
+        onClick={toggleTheme}
+        title="Toggle Dark Mode"
+        className="hidden md:flex fixed top-6 right-8 z-50 items-center justify-center w-12 h-12 rounded-full bg-white dark:bg-[#1a3a3a] border border-gray-200 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[#2d5a5a]/20 hover:scale-110 active:scale-95 hover:shadow-[#2d5a5a]/30 transition-all duration-300"
+      >
+        {theme === 'dark' 
+          ? <Sun size={24} className="text-amber-400" /> 
+          : <Moon size={24} className="text-[#2d5a5a]" />
+        }
+      </button>
+
       {/* Desktop Sidebar */}
       <nav className="hidden md:flex fixed left-0 top-0 h-screen w-44 flex-col bg-[#1a3a3a] text-white p-6">
         <div className="mb-8">
@@ -112,6 +126,13 @@ export const Navbar: React.FC = () => {
           </Link>
 
           <div className="flex items-center gap-1">
+            <button
+              onClick={toggleTheme}
+              title="Toggle Dark Mode"
+              className="p-2 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors flex items-center justify-center"
+            >
+              {theme === 'dark' ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-[#2d5a5a]" />}
+            </button>
             <Sheet>
               <SheetTrigger asChild>
                 <button className="p-2 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
