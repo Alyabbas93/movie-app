@@ -10,6 +10,7 @@ import { MovieCard } from '@/components/MovieCard';
 import { MoviesCarousel } from '@/components/MoviesCarousel';
 import { StatsPanel } from '@/components/StatsPanel';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { Footer } from '@/components/Footer';
 import { searchMovies, getTrendingMovies, getMovieDetails, Movie } from '@/lib/api';
 import { animatePageIn, animateCardsStagger } from '@/lib/animations';
 import { useWatchlist } from '@/lib/WatchlistContext';
@@ -291,7 +292,7 @@ function HomeContent() {
       <Navbar />
 
       {/* Main Content */}
-      <div className="flex-1 md:ml-44 pt-0">
+      <div className="flex-1 md:ml-44 pt-0 flex flex-col min-h-screen">
         {/* Search Section */}
         <div className="hidden md:flex md:flex-col md:items-start md:p-8 md:gap-4 bg-white dark:bg-[#1a3a3a] border-b border-gray-200 dark:border-white/10 transition-colors">
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Discover Movies</h2>
@@ -496,6 +497,7 @@ function HomeContent() {
           {/* Right Section - Stats Panel */}
           <StatsPanel className="hidden lg:flex w-72" />
         </div>
+        <Footer />
       </div>
     </main>
   );

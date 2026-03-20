@@ -7,6 +7,7 @@ import { MovieDetails } from '@/components/MovieDetails';
 import { getMovieDetails, Movie } from '@/lib/api';
 import { animatePageIn } from '@/lib/animations';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { Footer } from '@/components/Footer';
 
 interface MoviePageProps {
   params: Promise<{ id: string }>;
@@ -114,11 +115,14 @@ export default function MoviePage({ params }: MoviePageProps) {
     return (
       <main className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-[#0d1f1f]">
         <Navbar />
-        <div className="flex-1 md:ml-44 pt-16 md:pt-0 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#2d5a5a] mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Loading movie details...</p>
+        <div className="flex-1 md:ml-44 pt-16 md:pt-0 flex flex-col min-h-screen">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#2d5a5a] mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Loading movie details...</p>
+            </div>
           </div>
+          <Footer />
         </div>
       </main>
     );
@@ -128,8 +132,8 @@ export default function MoviePage({ params }: MoviePageProps) {
     return (
       <main className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-[#0d1f1f]">
         <Navbar />
-        <div className="flex-1 md:ml-44 pt-16 md:pt-0">
-          <div className="p-8">
+        <div className="flex-1 md:ml-44 pt-16 md:pt-0 flex flex-col min-h-screen">
+          <div className="flex-1 p-8">
             <Link href="/" className="inline-flex items-center gap-2 text-[#2d5a5a] dark:text-teal-400 font-medium mb-8">
               <ArrowLeft size={20} /> Back to Home
             </Link>
@@ -142,6 +146,7 @@ export default function MoviePage({ params }: MoviePageProps) {
               </Link>
             </div>
           </div>
+          <Footer />
         </div>
       </main>
     );
@@ -152,8 +157,8 @@ export default function MoviePage({ params }: MoviePageProps) {
   return (
     <main key={id} ref={containerRef} className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-[#0d1f1f] transition-colors">
       <Navbar />
-      <div className="flex-1 md:ml-44 pt-0">
-        <div className="p-4 md:p-8">
+      <div className="flex-1 md:ml-44 pt-0 flex flex-col min-h-screen">
+        <div className="flex-1 p-4 md:p-8">
           <Link href="/" className="inline-flex items-center gap-2 text-[#2d5a5a] dark:text-teal-400 hover:text-[#1a3a3a] dark:hover:text-teal-300 font-medium mb-8 transition-colors">
             <ArrowLeft size={20} /> Back to Home
           </Link>
@@ -288,6 +293,7 @@ export default function MoviePage({ params }: MoviePageProps) {
             </div>
           )}
         </div>
+        <Footer />
       </div>
     </main>
   );
