@@ -39,10 +39,10 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, type: string, season:
         ? `https://vidsrc.me/embed/tv?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}&season=${season}&episode=${episode}`
         : `https://vidsrc.me/embed/movie?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}`;
     case '2embed':
-      // Server 2: 2embed.stream
+      // Server 2: 2embed.cc (stable mirror)
       return isTV
-        ? `https://www.2embed.stream/embed/tv/${numericId}/${season}/${episode}`
-        : `https://www.2embed.stream/embed/movie/${numericId}`;
+        ? `https://www.2embed.cc/embed/tv/${numericId}/${season}/${episode}`
+        : `https://www.2embed.cc/embed/movie/${numericId}`;
     default:
       return `https://vidsrc.me/embed/movie/${numericId}`;
   }
