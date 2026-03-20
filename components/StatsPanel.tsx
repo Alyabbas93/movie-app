@@ -39,7 +39,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   const userStats = getStats(currentUserId);
 
   return (
-    <aside className={`flex flex-col bg-white dark:bg-[#1a3a3a] rounded-2xl p-6 space-y-8 shadow-sm border border-gray-100 dark:border-white/10 transition-colors ${className}`}>
+    <aside className={`flex flex-col bg-transparent p-4 md:p-0 space-y-8 transition-colors ${className}`}>
       {/* Stats Section */}
       <div>
         <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
