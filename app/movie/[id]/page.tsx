@@ -16,7 +16,7 @@ interface MoviePageProps {
 const SERVERS = [
   { id: 'vidsrc', label: 'Server 1' },
   { id: '2embed', label: 'Server 2' },
-  { id: 'vidsrcpro', label: 'Server 3' },
+  { id: 'autoembed', label: 'Server 3' },
 ] as const;
 
 type ServerId = typeof SERVERS[number]['id'];
@@ -43,11 +43,11 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, type: string, season:
       return isTV
         ? `https://www.2embed.stream/embed/tv/${numericId}/${season}/${episode}`
         : `https://www.2embed.stream/embed/movie/${numericId}`;
-    case 'vidsrcpro':
-      // Server 3: vidsrc.pro (fallback CDN)
+    case 'autoembed':
+      // Server 3: autoembed.cc (very stable)
       return isTV
-        ? `https://vidsrc.pro/embed/tv/${numericId}/${season}/${episode}`
-        : `https://vidsrc.pro/embed/movie/${numericId}`;
+        ? `https://player.autoembed.cc/embed/tv/${numericId}/${season}/${episode}`
+        : `https://player.autoembed.cc/embed/movie/${numericId}`;
     default:
       return `https://vidsrc.me/embed/movie/${numericId}`;
   }
