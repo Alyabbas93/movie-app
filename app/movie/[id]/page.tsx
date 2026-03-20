@@ -255,20 +255,19 @@ export default function MoviePage({ params }: MoviePageProps) {
             </p>
 
             {/* Iframe */}
-            <div className="bg-black rounded-xl overflow-hidden shadow-2xl aspect-video relative ring-1 ring-white/10">
+            <div className="bg-black rounded-xl shadow-2xl aspect-video relative ring-1 ring-white/10">
               <iframe
                 key={`${id}-${activeServer}-${playerKey}`}
                 title={`${movie.Title} – ${activeServer}`}
+                allowFullScreen={true}
+                allow="autoplay; fullscreen *; picture-in-picture *; encrypted-media; gyroscope; accelerometer; clipboard-write; xr-spatial-tracking; web-share"
                 src={embedUrl}
                 width="100%"
                 height="100%"
                 frameBorder="0"
                 scrolling="no"
-                allowFullScreen
-                allow="autoplay; fullscreen"
-                className="absolute inset-0"
+                className="absolute inset-0 rounded-xl"
               />
-              <div className="absolute inset-0 pointer-events-none border border-white/5 rounded-xl z-10" />
             </div>
           </div>
 
