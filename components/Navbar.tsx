@@ -51,8 +51,8 @@ export const Navbar: React.FC = () => {
         title="Toggle Dark Mode"
         className="hidden md:flex fixed top-6 right-8 z-50 items-center justify-center w-12 h-12 rounded-full bg-white dark:bg-[#1a3a3a] border border-gray-200 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[#2d5a5a]/20 hover:scale-110 active:scale-95 hover:shadow-[#2d5a5a]/30 transition-all duration-300"
       >
-        {theme === 'dark' 
-          ? <Sun size={24} className="text-amber-400" /> 
+        {theme === 'dark'
+          ? <Sun size={24} className="text-amber-400" />
           : <Moon size={24} className="text-[#2d5a5a]" />
         }
       </button>
@@ -60,8 +60,8 @@ export const Navbar: React.FC = () => {
       {/* Desktop Sidebar */}
       <nav className="hidden md:flex fixed left-0 top-0 h-screen w-44 flex-col bg-[#1a3a3a] text-white p-6">
         <div className="mb-8">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="block"
             onClick={() => {
               setActiveCategory('All');
@@ -108,9 +108,9 @@ export const Navbar: React.FC = () => {
         </div>
       </nav>
 
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
 
       {/* Mobile Header */}
@@ -120,8 +120,8 @@ export const Navbar: React.FC = () => {
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
 
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="font-bold text-lg dark:text-white transition-colors"
             onClick={() => {
               setActiveCategory('All');
@@ -156,7 +156,7 @@ export const Navbar: React.FC = () => {
               </SheetContent>
             </Sheet>
 
-            <button 
+            <button
               className="p-2 dark:text-white"
               onClick={() => setIsSettingsOpen(true)}
             >
@@ -194,10 +194,10 @@ export const Navbar: React.FC = () => {
               <p className="px-4 py-2 text-[10px] uppercase tracking-widest font-black text-gray-400">My Workspace</p>
               <button
                 onClick={() => {
-                   setIsOpen(false);
-                   // Navigate to a dedicated watchlist page or open a modal in the future
-                   // For now, let's at least show it's recognized
-                   window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                  setIsOpen(false);
+                  // Navigate to a dedicated watchlist page or open a modal in the future
+                  // For now, let's at least show it's recognized
+                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
                 }}
                 className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-sm font-bold text-red-500 flex items-center gap-3 transition-colors"
               >
@@ -211,7 +211,7 @@ export const Navbar: React.FC = () => {
 
       {/* Search Bar - Mobile only */}
       <div className="md:hidden mt-16 px-4 py-3 bg-gray-50 dark:bg-[#0d1f1f] border-b border-gray-100 dark:border-white/5 transition-colors">
-        <form 
+        <form
           onSubmit={(e) => {
             e.preventDefault();
             if (mobileQuery.trim()) {
@@ -230,8 +230,8 @@ export const Navbar: React.FC = () => {
             />
             <Search size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
           </div>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="px-4 py-2 bg-[#2d5a5a] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-teal-900/20 active:scale-95 transition-all"
           >
             Go

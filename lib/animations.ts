@@ -1,22 +1,19 @@
 import gsap from 'gsap';
 
 export const animatePageIn = (element: HTMLElement) => {
-  gsap.from(element, {
-    opacity: 0,
-    y: 20,
-    duration: 0.6,
-    ease: 'power2.out',
-  });
+  gsap.killTweensOf(element);
+  gsap.fromTo(element, 
+    { opacity: 0, y: 20 },
+    { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }
+  );
 };
 
 export const animateCardsStagger = (elements: HTMLElement[]) => {
-  gsap.from(elements, {
-    opacity: 0,
-    y: 20,
-    stagger: 0.1,
-    duration: 0.5,
-    ease: 'power2.out',
-  });
+  gsap.killTweensOf(elements);
+  gsap.fromTo(elements,
+    { opacity: 0, y: 20 },
+    { opacity: 1, y: 0, stagger: 0.1, duration: 0.5, ease: 'power2.out' }
+  );
 };
 
 export const animateCardHover = (element: HTMLElement) => {
