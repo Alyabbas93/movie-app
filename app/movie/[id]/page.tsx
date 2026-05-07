@@ -17,7 +17,6 @@ interface MoviePageProps {
 // All available embed servers – order determines auto-selection priority
 const SERVERS = [
   { id: 'vidsrc', label: 'Server 1' },
-  { id: '2embed', label: 'Server 2' },
 ] as const;
 
 type ServerId = typeof SERVERS[number]['id'];
@@ -39,11 +38,6 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, type: string, season:
       return isTV
         ? `https://vidsrc.me/embed/tv?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}&season=${season}&episode=${episode}`
         : `https://vidsrc.me/embed/movie?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}`;
-    case '2embed':
-      // Server 2: 2embed.cc (stable mirror)
-      return isTV
-        ? `https://www.2embed.cc/embed/tv/${numericId}/${season}/${episode}`
-        : `https://www.2embed.cc/embed/movie/${numericId}`;
     default:
       return `https://vidsrc.me/embed/movie/${numericId}`;
   }
@@ -105,12 +99,6 @@ export default function MoviePage({ params }: MoviePageProps) {
   const handleServerChange = (serverId: ServerId) => {
     setActiveServer(serverId);
     setPlayerKey(k => k + 1); // remount iframe
-  };
-
-  const handleTryNext = () => {
-    const currentIdx = SERVERS.findIndex(s => s.id === activeServer);
-    const next = SERVERS[(currentIdx + 1) % SERVERS.length];
-    handleServerChange(next.id);
   };
 
   if (isLoading) {
@@ -249,17 +237,17 @@ export default function MoviePage({ params }: MoviePageProps) {
               </div>
               {/* Try Next Server button */}
               <button
-                onClick={handleTryNext}
-                title="Try next server if this one doesn't work"
+                onClick={() => setPlayerKey(k => k + 1)}
+                title="Reload player if it doesn't work"
                 className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-[#2d5a5a] hover:text-white transition-all"
               >
-                <RefreshCw size={12} /> Try Next
+                <RefreshCw size={12} /> Reload
               </button>
             </div>
 
             {/* Player hint */}
             <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-3 text-center">
-              If the player shows a blank screen or an error, click <strong>Try Next</strong> to auto-switch servers.
+              If the player shows a blank screen or an error, click <strong>Reload</strong> to refresh the player.
             </p>
 
             {/* Iframe */}

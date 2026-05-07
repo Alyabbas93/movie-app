@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sheet';
 import { useTheme } from '@/lib/ThemeContext';
 
-const categories = ['All', 'Movies', 'Series', 'Popular'];
+const categories = ['All', 'Movies', 'Series', 'Popular', 'UFC'];
 
 export const Navbar: React.FC = () => {
   const router = useRouter();
