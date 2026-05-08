@@ -447,7 +447,7 @@ function HomeContent() {
               </div>
             ) : category === 'UFC' ? (
               <div className="w-full h-[60vh] md:h-[80vh] min-h-[400px] rounded-2xl overflow-hidden shadow-lg border border-gray-200 dark:border-white/10 bg-black">
-                <iframe src="https://2embed.stream/iptv/stream.php?url=QWdydTF3YThRMmNPUlhVUUgwYVREeFBMWjltUmJueFZXWU94RkdRL1hlb1FQUHN0N2MzNUV3cHVzKzhWMDlOQUpUR2U3RDhtbnpwV2dUcTBTREN6LzFOWDg3MUdrM1JyeTErclFJV1hFbDA9Ojp7RP%2Fib1J2IyYNUy5FCPYG&title=UFC&qualities=Auto,1080p,720p,480p,360p" frameBorder="0" allowFullScreen style={{width:'100%', height:'100%'}}></iframe>
+                <iframe src="https://2embed.stream/iptv/stream.php?url=QWkwV1BkbmFqQ1FTbXFadHhJTjFBRVBMNzFpUlI2QWhlV3RXdTJjZW1OcWg3R25rd29JM2FVWkhtTFNQbVl1N3lueTlEZG1NR3ZsR0NNUkZiZk5oUjFsUmRVYUxQb0IweUo2OFFBZFNheUJJelg2eGVNQlR6UC95a25qZmEvSnA6OsH8DOsyfBOw58iv2uGspXU%3D&title=UFC&qualities=Auto,1080p,720p,480p,360p" frameBorder="0" allowFullScreen style={{width:'100%', height:'100%'}}></iframe>
               </div>
             ) : (
               <>
