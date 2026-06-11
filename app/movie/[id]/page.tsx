@@ -14,9 +14,9 @@ interface MoviePageProps {
   params: Promise<{ id: string }>;
 }
 
-// All available embed servers – order determines auto-selection priority
 const SERVERS = [
-  { id: 'vidsrc', label: 'Server 1' },
+  { id: 'vidsrc', label: 'Server 1 (VidSrc)' },
+  { id: 'autoembed', label: 'Server 2 (AutoEmbed)' },
 ] as const;
 
 type ServerId = typeof SERVERS[number]['id'];
@@ -31,15 +31,23 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, type: string, season:
     numericId = parts.length === 3 ? parts[2] : parts[1];
   }
 
-  // Pass either tt-id or numeric TMDB id directly. These sources auto-detect.
+  // Pass either tt-id or numeric TMDB id directly.
   switch (serverId) {
     case 'vidsrc':
-      // Server 1: vidsrc.me is very stable and doesn't block iframe referrers
+      // Server 1: vidsrc-embed.ru (official vidsrc API)
       return isTV
-        ? `https://vidsrc.me/embed/tv?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}&season=${season}&episode=${episode}`
-        : `https://vidsrc.me/embed/movie?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}`;
+        ? `https://vidsrc-embed.ru/embed/tv?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}&season=${season}&episode=${episode}&autonext=1`
+        : `https://vidsrc-embed.ru/embed/movie?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}`;
+    case 'autoembed':
+      // Server 2: autoembed.co
+      return isTV
+        ? `https://autoembed.co/tv/${isTmdb ? 'tmdb' : 'imdb'}/${numericId}-${season}-${episode}`
+        : `https://autoembed.co/movie/${isTmdb ? 'tmdb' : 'imdb'}/${numericId}`;
+
     default:
-      return `https://vidsrc.me/embed/movie/${numericId}`;
+      return isTV
+        ? `https://vidsrc-embed.ru/embed/tv?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}&season=${season}&episode=${episode}`
+        : `https://vidsrc-embed.ru/embed/movie?${isTmdb ? `tmdb=${numericId}` : `imdb=${numericId}`}`;
   }
 }
 
