@@ -61,7 +61,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ imdbID, title, poster, yea
           {poster && poster !== 'N/A' ? (
             <img
               src={poster}
-              alt={title}
+              alt={`Watch ${title} (${year}) online free — ${title} movie poster`}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               draggable={false}
               onError={(e) => {

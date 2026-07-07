@@ -1,0 +1,50 @@
+{
+  "name": "Movies",
+  "short_name": "Movies",
+  "description": "Watch movies and TV shows for free online in HD — Movies",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1f1f",
+  "theme_color": "#1a3a3a",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "categories": ["entertainment", "movies"],
+  "icons": [
+    {
+      "src": "/icon-light-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "apple touch icon"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Browse Movies",
+      "url": "/?category=Movies",
+      "description": "Browse all movies"
+    },
+    {
+      "name": "Browse TV Shows",
+      "url": "/?category=Series",
+      "description": "Browse all TV series"
+    },
+    {
+      "name": "Popular Now",
+      "url": "/?category=Popular",
+      "description": "See what's popular"
+    }
+  ]
+}

@@ -21,6 +21,7 @@ export const Navbar: React.FC = () => {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const searchParams = useSearchParams();
   const queryParam = searchParams.get('q') || '';
   const [activeCategory, setActiveCategory] = useState('All');
@@ -58,53 +59,102 @@ export const Navbar: React.FC = () => {
       </button>
 
       {/* Desktop Sidebar */}
-      <nav className="hidden md:flex fixed left-0 top-0 h-screen w-44 flex-col bg-[#1a3a3a] text-white p-6">
-        <div className="mb-8">
-          <Link
-            href="/"
-            className="block"
-            onClick={() => {
-              setActiveCategory('All');
-              setIsOpen(false);
-              window.dispatchEvent(new CustomEvent('reset-home'));
-            }}
-          >
-            <h1 className="text-2xl font-bold text-white hover:opacity-80 transition-opacity">
-              <span className="text-[#2d5a5a]">m</span>ovies
-            </h1>
-          </Link>
-        </div>
-
-        <div className="flex-1 space-y-4">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => handleCategoryClick(category)}
-              className={`w-full text-left px-4 py-2 rounded-lg transition-colors text-sm font-medium ${activeCategory === category
-                ? 'bg-[#2d5a5a] text-white'
-                : 'hover:bg-[#2d5a5a] text-white/80'
-                }`}
+      <nav className="hidden md:flex fixed left-0 top-0 h-screen w-52 flex-col bg-[#1a3a3a] text-white overflow-y-auto">
+        <div className="p-6 pb-0">
+          {/* Logo */}
+          <div className="mb-8">
+            <Link
+              href="/"
+              className="block"
+              onClick={() => {
+                setActiveCategory('All');
+                setIsOpen(false);
+                window.dispatchEvent(new CustomEvent('reset-home'));
+              }}
             >
-              {category}
+              <h1 className="text-2xl font-bold text-white hover:opacity-80 transition-opacity">
+                <span className="text-[#2d5a5a]">m</span>ovies
+              </h1>
+            </Link>
+          </div>
+
+          {/* Categories */}
+          <div className="flex-1 space-y-1 mb-4">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => handleCategoryClick(category)}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-colors text-sm font-medium ${activeCategory === category
+                  ? 'bg-[#2d5a5a] text-white'
+                  : 'hover:bg-[#2d5a5a] text-white/80'
+                  }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+
+          {/* Bottom actions */}
+          <div className="border-t border-[#2d5a5a] pt-4 space-y-1">
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-[#2d5a5a] transition-colors text-sm font-medium text-white/80 hover:text-white"
+            >
+              <SettingsIcon size={18} />
+              Settings
             </button>
-          ))}
+            <button
+              onClick={() => console.log('[v0] Profile clicked')}
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-[#2d5a5a] transition-colors text-sm font-medium text-white/80 hover:text-white"
+            >
+              <User size={18} />
+              Profile
+            </button>
+            <Link
+              href="/about"
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-[#2d5a5a] transition-colors text-sm font-medium text-white/80 hover:text-white"
+            >
+              About
+            </Link>
+          </div>
         </div>
 
-        <div className="border-t border-[#2d5a5a] pt-4 space-y-2">
+        <div className="mt-4 mx-3 mb-6 rounded-xl bg-[#0d2626] border border-[#2d5a5a]/30 overflow-hidden">
           <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-[#2d5a5a] transition-colors text-sm font-medium text-white/80 hover:text-white"
+            onClick={() => setIsAboutOpen(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left"
           >
-            <SettingsIcon size={18} />
-            Settings
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#2d5a5a]">About</span>
+            <span className="text-[#2d5a5a] text-xs font-bold">{isAboutOpen ? '\u25b2' : '\u25bc'}</span>
           </button>
-          <button
-            onClick={() => console.log('[v0] Profile clicked')}
-            className="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-[#2d5a5a] transition-colors text-sm font-medium text-white/80 hover:text-white"
-          >
-            <User size={18} />
-            Profile
-          </button>
+
+          {isAboutOpen && (
+            <div className="px-4 pb-4 space-y-3">
+              <p className="text-[10px] text-white/60 leading-relaxed">
+                <strong className="text-white/80">Movies</strong> — watch movies online free in HD.
+                Free movie streaming, no sign-up required. Stream latest movies 2025, TV shows, series online free.
+                Watch action, comedy, horror, sci-fi, thriller movies free. No subscription needed.
+              </p>
+              <div className="space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-widest text-[#2d5a5a]">Browse Free Movies</p>
+                <div className="flex flex-wrap gap-1">
+                  {['Action','Comedy','Horror','Sci-Fi','Thriller','Romance','Drama','Documentary'].map(g => (
+                    <Link
+                      key={g}
+                      href={`/?q=${g.toLowerCase()}`}
+                      className="text-[9px] px-1.5 py-0.5 rounded bg-[#2d5a5a]/20 text-white/60 hover:bg-[#2d5a5a] hover:text-white transition-colors"
+                    >
+                      {g}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+              <p className="text-[9px] text-white/40 leading-relaxed">
+                Watch free HD movies online · stream TV shows free · no registration · no subscription ·
+                latest movies 2025 · free streaming site · best free movie streaming
+              </p>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -195,8 +245,6 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  // Navigate to a dedicated watchlist page or open a modal in the future
-                  // For now, let's at least show it's recognized
                   window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
                 }}
                 className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-sm font-bold text-red-500 flex items-center gap-3 transition-colors"
@@ -204,6 +252,13 @@ export const Navbar: React.FC = () => {
                 <Heart size={18} className="fill-red-500" />
                 My Watchlist
               </button>
+              <Link
+                href="/about"
+                onClick={() => setIsOpen(false)}
+                className="w-full block text-left px-4 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-sm font-bold text-gray-700 dark:text-gray-300 transition-colors"
+              >
+                About
+              </Link>
             </div>
           </div>
         )}
