@@ -1,7 +1,7 @@
 {
-  "name": "Movies",
+  "name": "Movies — Watch Free Movies & TV Shows Online",
   "short_name": "Movies",
-  "description": "Watch movies and TV shows for free online in HD — Movies",
+  "description": "Watch movies and TV shows for free online in HD — no sign-up required. Browse trending films, popular series, action, horror, sci-fi and more.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0d1f1f",
@@ -9,42 +9,71 @@
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en-US",
-  "categories": ["entertainment", "movies"],
+  "dir": "ltr",
+  "categories": ["entertainment", "movies", "streaming"],
+  "keywords": ["movies", "free streaming", "watch online", "TV shows", "HD movies", "no signup"],
   "icons": [
     {
       "src": "/icon-light-32x32.png",
       "sizes": "32x32",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/apple-icon.png",
       "sizes": "180x180",
       "type": "image/png",
-      "purpose": "apple touch icon"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "maskable any"
+      "purpose": "any"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "label": "Movies — Watch Movies & TV Shows Free Online"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Browse Movies",
+      "short_name": "Movies",
       "url": "/?category=Movies",
-      "description": "Browse all movies"
+      "description": "Browse all free movies",
+      "icons": [{ "src": "/icon-light-32x32.png", "sizes": "32x32" }]
     },
     {
       "name": "Browse TV Shows",
+      "short_name": "TV Shows",
       "url": "/?category=Series",
-      "description": "Browse all TV series"
+      "description": "Browse all free TV series",
+      "icons": [{ "src": "/icon-light-32x32.png", "sizes": "32x32" }]
     },
     {
-      "name": "Popular Now",
+      "name": "Trending Now",
+      "short_name": "Trending",
       "url": "/?category=Popular",
-      "description": "See what's popular"
+      "description": "See what is trending and popular now",
+      "icons": [{ "src": "/icon-light-32x32.png", "sizes": "32x32" }]
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }

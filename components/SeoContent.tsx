@@ -16,57 +16,61 @@ const genres = [
   { label: 'Crime Series', href: '/?category=Series&q=crime', icon: <Search size={14} /> },
   { label: 'Fantasy Series', href: '/?category=Series&q=fantasy', icon: <Star size={14} /> },
   { label: 'Reality TV', href: '/?category=Series&q=reality', icon: <Tv size={14} /> },
+  { label: 'Superhero Movies', href: '/?q=superhero', icon: <Zap size={14} /> },
+  { label: 'Adventure Movies', href: '/?q=adventure', icon: <Globe size={14} /> },
+  { label: 'Mystery Series', href: '/?category=Series&q=mystery', icon: <Search size={14} /> },
+  { label: 'Anime Series', href: '/?category=Series&q=anime', icon: <Tv size={14} /> },
 ];
 
 const features = [
   {
     icon: <Zap size={20} className="text-[#2d5a5a]" />,
-    title: 'HD Streaming',
-    desc: 'Watch movies and TV shows in Full HD and 1080p. Crystal-clear picture quality with no buffering, free of charge.',
+    title: 'HD Streaming — 1080p Free',
+    desc: 'Watch movies and TV shows in Full HD and 1080p. Crystal-clear picture quality with no buffering, completely free of charge.',
   },
   {
     icon: <Shield size={20} className="text-[#2d5a5a]" />,
     title: 'No Sign-Up Required',
-    desc: 'Stream any movie or TV series instantly — no account, no credit card, no registration required.',
+    desc: 'Stream any movie or TV series instantly — no account, no credit card, no registration required. Just press play.',
   },
   {
     icon: <Smartphone size={20} className="text-[#2d5a5a]" />,
     title: 'Watch on Any Device',
-    desc: 'Works on your phone, tablet, laptop, and smart TV. Enjoy free movies anywhere, anytime.',
+    desc: 'Works on your phone, tablet, laptop, and smart TV. Enjoy free movies anywhere, anytime, on any screen.',
   },
   {
     icon: <Globe size={20} className="text-[#2d5a5a]" />,
     title: 'Thousands of Titles',
-    desc: 'Browse a massive library of free movies and TV shows — from Hollywood blockbusters to indie gems.',
+    desc: 'Browse a massive library of free movies and TV shows — from Hollywood blockbusters to indie gems and international hits.',
   },
   {
     icon: <Film size={20} className="text-[#2d5a5a]" />,
-    title: 'Latest Movies 2025',
-    desc: 'Find the newest movie releases of 2025 and 2026. The free streaming library is updated daily.',
+    title: 'Latest Movies 2025–2026',
+    desc: 'Find the newest movie releases of 2025 and 2026. The free streaming library is updated daily with the latest titles.',
   },
   {
     icon: <Clock size={20} className="text-[#2d5a5a]" />,
-    title: 'TV Show Episodes',
-    desc: 'Watch complete TV series with full seasons and all episodes — stream free online right now.',
+    title: 'Full TV Series & Episodes',
+    desc: 'Watch complete TV series with full seasons and all episodes — stream free online right now without any download.',
   },
 ];
 
 const faqs = [
   {
     q: 'Is Movies free to watch movies online?',
-    a: 'Yes, Movies is 100% free. You can watch any movie or TV show online without paying anything. No subscription, no hidden fees — just free movie streaming in HD.',
+    a: 'Yes, Movies is 100% free. You can watch any movie or TV show online without paying anything. No subscription, no hidden fees — just free movie streaming in HD quality.',
   },
   {
     q: 'Do I need to create an account to watch movies?',
     a: 'No account or sign-up is needed. Simply search for any movie or TV series and start watching instantly. Watch free movies online without registration.',
   },
   {
-    q: 'Can I watch the latest movies 2025 on Movies?',
-    a: 'Yes. Movies features the latest movies 2025 and trending TV shows. The library is updated regularly with new releases so you can always find something fresh to stream.',
+    q: 'Can I watch the latest movies 2025 and 2026 on Movies?',
+    a: 'Yes. Movies features the latest movies of 2025 and 2026 plus trending TV shows. The library is updated regularly with new releases so you can always find something fresh to stream for free.',
   },
   {
     q: 'What types of movies and shows are available?',
-    a: 'Movies has everything — action, comedy, horror, sci-fi, romance, thriller, drama, documentary, and more. Watch complete TV series with all seasons and episodes free online.',
+    a: 'Movies has everything — action, comedy, horror, sci-fi, romance, thriller, drama, documentary, anime, superhero and more. Watch complete TV series with all seasons and episodes free online.',
   },
   {
     q: 'What devices can I use to watch movies?',
@@ -76,6 +80,14 @@ const faqs = [
     q: 'What is the video streaming quality?',
     a: 'Movies streams in HD quality (720p and 1080p). Quality automatically adjusts based on your internet speed so you always get the best possible stream.',
   },
+  {
+    q: 'Can I watch TV shows with all seasons and episodes?',
+    a: 'Yes! Movies lets you watch full TV series including all seasons and every episode. Select your season and episode directly from the episode picker on each show page.',
+  },
+  {
+    q: 'Is there a download option?',
+    a: 'Movies is a streaming-only service. You can watch any movie or TV show instantly in your browser without downloading anything. No app or plugin is required.',
+  },
 ];
 
 const popularSearches = [
@@ -83,6 +95,7 @@ const popularSearches = [
   'free streaming movies',
   'watch TV shows online',
   'best movies 2025',
+  'best movies 2026',
   'action movies free',
   'horror movies online',
   'comedy series streaming',
@@ -91,6 +104,11 @@ const popularSearches = [
   'latest movies online',
   'thriller movies free',
   'sci-fi movies streaming',
+  'watch anime online free',
+  'superhero movies free',
+  'documentary streaming free',
+  'binge watch series free',
+  'new releases 2026',
 ];
 
 export function SeoContent() {

@@ -309,7 +309,7 @@ function HomeContent() {
       <div className="flex-1 md:ml-52 pt-0 flex flex-col min-h-screen">
         {/* Search Section */}
         <div className="hidden md:flex md:flex-col md:items-start md:p-8 md:gap-4 bg-white dark:bg-[#1a3a3a] border-b border-gray-200 dark:border-white/10 transition-colors">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Watch Movies Online Free — Discover &amp; Stream in HD</h1>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Watch Movies Online Free — Discover &amp; Stream in HD</h2>
           <SearchBar onSearch={handleSearch} />
         </div>        {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-4 pb-4 pt-0 md:p-8">

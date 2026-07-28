@@ -3,6 +3,7 @@ const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
 
 export interface Movie {
   imdbID: string;
+  tmdbID?: string;
   Title: string;
   Year: string;
   Rated: string;
@@ -219,6 +220,7 @@ function mapTmdbDetail(data: any, originalId: string): Movie {
   const actors = data.credits?.cast?.slice(0, 4).map((c: any) => c.name).join(', ') || 'N/A';
   return {
     imdbID: imdbId,
+    tmdbID: data.id?.toString(),
     Title: data.title || data.name || 'N/A',
     Year: (data.release_date || data.first_air_date || '').substring(0, 4) || 'N/A',
     Rated: 'N/A',

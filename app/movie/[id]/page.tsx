@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getMovieDetails } from '@/lib/api';
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://yourdomain.com';
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://yourmoviesite.com';
 
 // ─── Dynamic Metadata for each movie ────────────────────────────────────────
 export async function generateMetadata({
@@ -22,9 +22,9 @@ export async function generateMetadata({
       };
     }
 
-    const title = `Watch ${movie.Title} (${movie.Year}) Free Online`;
+    const title = `Watch ${movie.Title} (${movie.Year}) Free Online in HD`;
     const description = movie.Plot && movie.Plot !== 'N/A'
-      ? `${movie.Plot.slice(0, 155)}...`
+      ? `Watch ${movie.Title} free online. ${movie.Plot.slice(0, 130)}...`
       : `Watch ${movie.Title} online for free in HD. Directed by ${movie.Director}. Starring ${movie.Actors}.`;
 
     const poster = movie.Poster && movie.Poster !== 'N/A' ? movie.Poster : `${BASE_URL}/og-image.png`;
@@ -37,10 +37,14 @@ export async function generateMetadata({
         `watch ${movie.Title} online free`,
         `${movie.Title} streaming`,
         `${movie.Title} ${movie.Year}`,
-        `${movie.Title} full movie`,
+        `${movie.Title} full movie free`,
         `watch ${movie.Title} HD`,
-        ...(movie.Genre ? movie.Genre.split(', ').map((g: string) => `${g} movies`) : []),
-        ...(movie.Director && movie.Director !== 'N/A' ? [`movies by ${movie.Director}`] : []),
+        `${movie.Title} free online`,
+        `stream ${movie.Title}`,
+        `${movie.Title} no signup`,
+        ...(movie.Genre ? movie.Genre.split(', ').map((g: string) => `${g} movies free`) : []),
+        ...(movie.Director && movie.Director !== 'N/A' ? [`${movie.Director} movies`, `movies by ${movie.Director}`] : []),
+        ...(movie.Actors && movie.Actors !== 'N/A' ? movie.Actors.split(', ').slice(0, 3).map((a: string) => `${a} movies`) : []),
       ],
       alternates: {
         canonical: canonicalUrl,
@@ -54,9 +58,9 @@ export async function generateMetadata({
         images: [
           {
             url: poster,
-            width: 300,
-            height: 450,
-            alt: `${movie.Title} movie poster`,
+            width: 500,
+            height: 750,
+            alt: `Watch ${movie.Title} (${movie.Year}) online free — movie poster`,
           },
         ],
         releaseDate: movie.Released !== 'N/A' ? movie.Released : undefined,
@@ -75,13 +79,14 @@ export async function generateMetadata({
           follow: true,
           'max-image-preview': 'large',
           'max-snippet': -1,
+          'max-video-preview': -1,
         },
       },
     };
   } catch {
     return {
       title: 'Watch Movie Online Free | Movies',
-      description: 'Stream this movie for free on Movies in HD quality.',
+      description: 'Stream this movie for free on Movies in HD quality. No sign-up required.',
     };
   }
 }
@@ -103,79 +108,75 @@ interface MoviePageProps {
 export default async function MoviePage({ params }: MoviePageProps) {
   const { id } = await params;
 
-  // Fetch movie server-side for JSON-LD (SEO bots see real data)
-  let movieJsonLd: object | null = null;
+  // Fetch movie ONCE server-side for JSON-LD (SEO bots see real data)
+  // Reuse same fetch — do not double-call getMovieDetails
+  let movie = null;
   try {
-    const movie = await getMovieDetails(id);
-    if (movie) {
-      movieJsonLd = {
-        '@context': 'https://schema.org',
-        '@type': movie.Type === 'series' ? 'TVSeries' : 'Movie',
-        name: movie.Title,
-        description: movie.Plot !== 'N/A' ? movie.Plot : undefined,
-        image: movie.Poster !== 'N/A' ? movie.Poster : undefined,
-        datePublished: movie.Released !== 'N/A' ? movie.Released : undefined,
-        duration: movie.Runtime !== 'N/A' ? `PT${movie.Runtime?.replace(' min', 'M')}` : undefined,
-        contentRating: movie.Rated !== 'N/A' ? movie.Rated : undefined,
-        genre: movie.Genre !== 'N/A' ? movie.Genre?.split(', ') : undefined,
-        director: movie.Director && movie.Director !== 'N/A'
-          ? { '@type': 'Person', name: movie.Director }
-          : undefined,
-        actor: movie.Actors && movie.Actors !== 'N/A'
-          ? movie.Actors.split(', ').map((name: string) => ({ '@type': 'Person', name }))
-          : undefined,
-        aggregateRating: movie.imdbRating && movie.imdbRating !== 'N/A'
-          ? {
-              '@type': 'AggregateRating',
-              ratingValue: movie.imdbRating,
-              bestRating: '10',
-              worstRating: '1',
-              ratingCount: movie.imdbVotes?.replace(/,/g, '') || '0',
-            }
-          : undefined,
-        url: `${BASE_URL}/movie/${id}`,
-        potentialAction: {
-          '@type': 'WatchAction',
-          target: `${BASE_URL}/movie/${id}`,
-        },
-      };
-    }
+    movie = await getMovieDetails(id);
   } catch {
     // silently fail — client component will still load
   }
 
-  // ── Breadcrumb JSON-LD ────────────────────────────────────────────────────
+  let movieJsonLd: object | null = null;
   let breadcrumbJsonLd: object | null = null;
-  try {
-    const movie = await getMovieDetails(id);
-    if (movie) {
-      breadcrumbJsonLd = {
-        '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          {
-            '@type': 'ListItem',
-            position: 1,
-            name: 'Movies',
-            item: BASE_URL,
-          },
-          {
-            '@type': 'ListItem',
-            position: 2,
-            name: movie.Type === 'series' ? 'TV Series' : 'Movies',
-            item: `${BASE_URL}/?category=${movie.Type === 'series' ? 'Series' : 'Movies'}`,
-          },
-          {
-            '@type': 'ListItem',
-            position: 3,
-            name: movie.Title,
-            item: `${BASE_URL}/movie/${id}`,
-          },
-        ],
-      };
-    }
-  } catch {
-    // silently fail
+
+  if (movie) {
+    movieJsonLd = {
+      '@context': 'https://schema.org',
+      '@type': movie.Type === 'series' ? 'TVSeries' : 'Movie',
+      name: movie.Title,
+      description: movie.Plot !== 'N/A' ? movie.Plot : undefined,
+      image: movie.Poster !== 'N/A' ? movie.Poster : undefined,
+      datePublished: movie.Released !== 'N/A' ? movie.Released : undefined,
+      duration: movie.Runtime !== 'N/A' ? `PT${movie.Runtime?.replace(' min', 'M')}` : undefined,
+      contentRating: movie.Rated !== 'N/A' ? movie.Rated : undefined,
+      genre: movie.Genre !== 'N/A' ? movie.Genre?.split(', ') : undefined,
+      director: movie.Director && movie.Director !== 'N/A'
+        ? { '@type': 'Person', name: movie.Director }
+        : undefined,
+      actor: movie.Actors && movie.Actors !== 'N/A'
+        ? movie.Actors.split(', ').map((name: string) => ({ '@type': 'Person', name }))
+        : undefined,
+      aggregateRating: movie.imdbRating && movie.imdbRating !== 'N/A'
+        ? {
+            '@type': 'AggregateRating',
+            ratingValue: movie.imdbRating,
+            bestRating: '10',
+            worstRating: '1',
+            ratingCount: movie.imdbVotes?.replace(/,/g, '') || '0',
+          }
+        : undefined,
+      url: `${BASE_URL}/movie/${id}`,
+      potentialAction: {
+        '@type': 'WatchAction',
+        target: `${BASE_URL}/movie/${id}`,
+      },
+    };
+
+    breadcrumbJsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Movies',
+          item: BASE_URL,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: movie.Type === 'series' ? 'TV Series' : 'Movies',
+          item: `${BASE_URL}/?category=${movie.Type === 'series' ? 'Series' : 'Movies'}`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: movie.Title,
+          item: `${BASE_URL}/movie/${id}`,
+        },
+      ],
+    };
   }
 
   return (

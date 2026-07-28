@@ -5,7 +5,7 @@ import './globals.css'
 import { WatchlistProvider } from '@/lib/WatchlistContext'
 import { ThemeProvider } from '@/lib/ThemeContext'
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://yourdomain.com';
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://yourmoviesite.com';
 
 const outfit = Outfit({
   variable: '--font-outfit',
@@ -33,9 +33,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   // ─── Core ────────────────────────────────────────────────────────────────
   metadataBase: new URL(BASE_URL),
+  applicationName: 'Movies',
   title: {
-    default: 'Movies — Watch Movies & TV Shows Free Online',
-    template: '%s | Movies',
+    default: 'Movies — Watch Movies & TV Shows Free Online in HD',
+    template: '%s | Movies — Free Streaming',
   },
   description:
     'Watch movies and TV shows online free in HD. Browse trending films, top-rated series, action, sci-fi, comedy and more. Free movie streaming with no sign-up required.',
@@ -48,8 +49,10 @@ export const metadata: Metadata = {
     'watch series free',
     'movie streaming site',
     'best free movies 2025',
+    'best free movies 2026',
     'watch films without signup',
     'trending movies 2025',
+    'trending movies 2026',
     'popular TV shows free',
     'watch action movies online',
     'sci-fi movies streaming free',
@@ -58,11 +61,21 @@ export const metadata: Metadata = {
     'free HD movie streaming',
     'watch movies no registration',
     'free streaming no subscription',
+    'binge watch TV shows free',
+    'free movie streaming site',
+    'watch full movies online free',
+    'online movie streaming',
+    'stream free movies and shows',
   ],
   authors: [{ name: 'Movies', url: BASE_URL }],
   creator: 'Movies',
   publisher: 'Movies',
   category: 'Entertainment',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
 
   // ─── Robots ──────────────────────────────────────────────────────────────
   robots: {

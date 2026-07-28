@@ -48,6 +48,10 @@ const nextConfig = {
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           // DNS prefetch control
           { key: 'X-DNS-Prefetch-Control', value: 'on' },
+          // HSTS — positive Google ranking signal for HTTPS
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          // Cross-Origin isolation
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
         ],
       },
       // Long-cache for static assets (improves repeat-visit performance)
