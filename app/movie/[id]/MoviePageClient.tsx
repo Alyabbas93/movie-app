@@ -40,12 +40,12 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, tmdbId: string | unde
       // Server 1 (VidSrc) — Supports IMDb and TMDb IDs
       if (hasImdb) {
         return isTV
-          ? `https://vidsrc-embed.ru/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}&autonext=1`
-          : `https://vidsrc-embed.ru/embed/movie?imdb=${imdbId}`;
+          ? `https://vidsrc.pm/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
+          : `https://vidsrc.pm/embed/movie?imdb=${imdbId}`;
       }
       return isTV
-        ? `https://vidsrc-embed.ru/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}&autonext=1`
-        : `https://vidsrc-embed.ru/embed/movie?tmdb=${finalTmdbId || numericId}`;
+        ? `https://vidsrc.pm/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}`
+        : `https://vidsrc.pm/embed/movie?tmdb=${finalTmdbId || numericId}`;
 
     case 'embed2':
       // Server 2 (2Embed)
@@ -65,12 +65,12 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, tmdbId: string | unde
     default:
       if (hasImdb) {
         return isTV
-          ? `https://vidsrc-embed.ru/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
-          : `https://vidsrc-embed.ru/embed/movie?imdb=${imdbId}`;
+          ? `https://vidsrc.pm/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
+          : `https://vidsrc.pm/embed/movie?imdb=${imdbId}`;
       }
       return isTV
-        ? `https://vidsrc-embed.ru/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}`
-        : `https://vidsrc-embed.ru/embed/movie?tmdb=${finalTmdbId || numericId}`;
+        ? `https://vidsrc.pm/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}`
+        : `https://vidsrc.pm/embed/movie?tmdb=${finalTmdbId || numericId}`;
   }
 }
 
