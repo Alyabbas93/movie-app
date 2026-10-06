@@ -16,10 +16,8 @@ interface MoviePageClientProps {
 
 const SERVERS = [
   { id: 'vidsrc', label: 'Server 1 (VidSrc) ⚡' },
-  { id: 'vidlink', label: 'Server 2 (VidLink)' },
-  { id: 'embed2', label: 'Server 3 (2Embed)' },
-  { id: 'autoembed', label: 'Server 4 (AutoEmbed)' },
-  { id: 'multiembed', label: 'Server 5 (MultiEmbed)' },
+  { id: 'embed2', label: 'Server 2 (2Embed)' },
+  { id: 'autoembed', label: 'Server 3 (AutoEmbed)' },
 ] as const;
 
 type ServerId = typeof SERVERS[number]['id'];
@@ -39,54 +37,40 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, tmdbId: string | unde
 
   switch (serverId) {
     case 'vidsrc':
-      // vidsrc.me — active & reliable player supporting both IMDb and TMDb
+      // Server 1 (VidSrc) — Supports IMDb and TMDb IDs
       if (hasImdb) {
         return isTV
-          ? `https://vidsrc.me/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
-          : `https://vidsrc.me/embed/movie?imdb=${imdbId}`;
+          ? `https://vidsrc-embed.ru/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}&autonext=1`
+          : `https://vidsrc-embed.ru/embed/movie?imdb=${imdbId}`;
       }
       return isTV
-        ? `https://vidsrc.me/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}`
-        : `https://vidsrc.me/embed/movie?tmdb=${finalTmdbId || numericId}`;
-
-    case 'vidlink':
-      // vidlink.pro — fast multi-quality stream
-      return isTV
-        ? `https://vidlink.pro/tv/${finalTmdbId || numericId}/${season}/${episode}`
-        : `https://vidlink.pro/movie/${finalTmdbId || numericId}`;
+        ? `https://vidsrc-embed.ru/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}&autonext=1`
+        : `https://vidsrc-embed.ru/embed/movie?tmdb=${finalTmdbId || numericId}`;
 
     case 'embed2':
-      // 2embed.cc — backup server
+      // Server 2 (2Embed)
+      const embed2Id = isTmdb ? numericId : (hasImdb ? imdbId : (finalTmdbId || numericId));
       return isTV
-        ? `https://www.2embed.cc/embedtv/${isTmdb ? numericId : imdbId}&s=${season}&e=${episode}`
-        : `https://www.2embed.cc/embed/${isTmdb ? numericId : imdbId}`;
+        ? `https://www.2embed.cc/embedtv/${embed2Id}&s=${season}&e=${episode}`
+        : `https://www.2embed.cc/embed/${embed2Id}`;
 
     case 'autoembed':
-      // autoembed.co
+      // Server 3 (AutoEmbed)
+      const autoId = isTmdb || !hasImdb ? (finalTmdbId || numericId) : imdbId;
+      const autoType = isTmdb || !hasImdb ? 'tmdb' : 'imdb';
       return isTV
-        ? `https://autoembed.co/tv/${isTmdb ? 'tmdb' : 'imdb'}/${numericId}-${season}-${episode}`
-        : `https://autoembed.co/movie/${isTmdb ? 'tmdb' : 'imdb'}/${numericId}`;
-
-    case 'multiembed':
-      // multiembed.mov
-      if (isTmdb || !hasImdb) {
-        return isTV
-          ? `https://multiembed.mov/?video_id=${finalTmdbId || numericId}&tmdb=1&s=${season}&e=${episode}`
-          : `https://multiembed.mov/?video_id=${finalTmdbId || numericId}&tmdb=1`;
-      }
-      return isTV
-        ? `https://multiembed.mov/?video_id=${imdbId}&s=${season}&e=${episode}`
-        : `https://multiembed.mov/?video_id=${imdbId}`;
+        ? `https://autoembed.co/tv/${autoType}/${autoId}-${season}-${episode}`
+        : `https://autoembed.co/movie/${autoType}/${autoId}`;
 
     default:
       if (hasImdb) {
         return isTV
-          ? `https://vidsrc.me/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
-          : `https://vidsrc.me/embed/movie?imdb=${imdbId}`;
+          ? `https://vidsrc-embed.ru/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
+          : `https://vidsrc-embed.ru/embed/movie?imdb=${imdbId}`;
       }
       return isTV
-        ? `https://vidsrc.me/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}`
-        : `https://vidsrc.me/embed/movie?tmdb=${finalTmdbId || numericId}`;
+        ? `https://vidsrc-embed.ru/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}`
+        : `https://vidsrc-embed.ru/embed/movie?tmdb=${finalTmdbId || numericId}`;
   }
 }
 
@@ -318,7 +302,7 @@ export default function MoviePageClient({ params }: MoviePageClientProps) {
               <div className="flex items-center justify-between gap-3 mb-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 text-amber-700 dark:text-amber-300">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <AlertTriangle size={14} className="shrink-0" />
-                  <span>This server is taking a moment to load. Try <strong>Server 2 (VidLink)</strong> or other servers above if it persists.</span>
+                  <span>This server is taking a moment to load. Try <strong>Server 2</strong> or <strong>Server 3</strong> if it persists.</span>
                 </div>
                 <button
                   onClick={() => setPlayerSlowWarning(false)}
@@ -336,6 +320,7 @@ export default function MoviePageClient({ params }: MoviePageClientProps) {
                 title={`Watch ${movie.Title} online free — ${activeServer}`}
                 allowFullScreen={true}
                 allow="autoplay; fullscreen *; picture-in-picture *; encrypted-media; gyroscope; accelerometer; clipboard-write; xr-spatial-tracking; web-share"
+                referrerPolicy="origin"
                 src={embedUrl}
                 width="100%"
                 height="100%"
