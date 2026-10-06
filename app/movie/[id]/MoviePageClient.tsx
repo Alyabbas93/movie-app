@@ -36,41 +36,37 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, tmdbId: string | unde
   const hasImdb = imdbId && imdbId.startsWith('tt');
 
   switch (serverId) {
-    case 'vidsrc':
-      // Server 1 (VidSrc) — Supports IMDb and TMDb IDs
-      if (hasImdb) {
-        return isTV
-          ? `https://vidsrc.pm/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
-          : `https://vidsrc.pm/embed/movie?imdb=${imdbId}`;
-      }
+    case 'vidsrc': {
+      // Server 1 (VidSrc) — Supports IMDb (tt...) & TMDb IDs
+      const targetId = hasImdb ? imdbId : (finalTmdbId || numericId);
       return isTV
-        ? `https://vidsrc.pm/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}`
-        : `https://vidsrc.pm/embed/movie?tmdb=${finalTmdbId || numericId}`;
+        ? `https://vidsrc.to/embed/tv/${targetId}/${season}/${episode}`
+        : `https://vidsrc.to/embed/movie/${targetId}`;
+    }
 
-    case 'embed2':
+    case 'embed2': {
       // Server 2 (2Embed)
       const embed2Id = isTmdb ? numericId : (hasImdb ? imdbId : (finalTmdbId || numericId));
       return isTV
         ? `https://www.2embed.cc/embedtv/${embed2Id}&s=${season}&e=${episode}`
         : `https://www.2embed.cc/embed/${embed2Id}`;
+    }
 
-    case 'autoembed':
+    case 'autoembed': {
       // Server 3 (AutoEmbed)
       const autoId = isTmdb || !hasImdb ? (finalTmdbId || numericId) : imdbId;
       const autoType = isTmdb || !hasImdb ? 'tmdb' : 'imdb';
       return isTV
         ? `https://autoembed.co/tv/${autoType}/${autoId}-${season}-${episode}`
         : `https://autoembed.co/movie/${autoType}/${autoId}`;
+    }
 
-    default:
-      if (hasImdb) {
-        return isTV
-          ? `https://vidsrc.pm/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
-          : `https://vidsrc.pm/embed/movie?imdb=${imdbId}`;
-      }
+    default: {
+      const targetId = hasImdb ? imdbId : (finalTmdbId || numericId);
       return isTV
-        ? `https://vidsrc.pm/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}`
-        : `https://vidsrc.pm/embed/movie?tmdb=${finalTmdbId || numericId}`;
+        ? `https://vidsrc.to/embed/tv/${targetId}/${season}/${episode}`
+        : `https://vidsrc.to/embed/movie/${targetId}`;
+    }
   }
 }
 
