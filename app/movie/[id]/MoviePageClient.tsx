@@ -15,17 +15,17 @@ interface MoviePageClientProps {
 }
 
 const SERVERS = [
-  { id: 'vidsrc', label: 'Server 1 (VidSrc) ⚡' },
-  { id: 'embed2', label: 'Server 2 (2Embed)' },
-  { id: 'autoembed', label: 'Server 3 (AutoEmbed)' },
+  { id: 'vidsrc', label: 'Server 1 ⚡' },
+  { id: 'embed2', label: 'Server 2' },
+  { id: 'autoembed', label: 'Server 3' },
 ] as const;
 
 type ServerId = typeof SERVERS[number]['id'];
 
 function buildEmbedUrl(serverId: ServerId, imdbId: string, tmdbId: string | undefined, type: string, season: number, episode: number): string {
   const isTV = type === 'series' || type === 'tv';
-  const isTmdb = imdbId.startsWith('tmdb-');
   let numericId = imdbId;
+  const isTmdb = imdbId.startsWith('tmdb-');
   
   if (isTmdb) {
     const parts = imdbId.split('-');
@@ -33,40 +33,28 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, tmdbId: string | unde
   }
 
   const finalTmdbId = tmdbId || (isTmdb ? numericId : '');
-  const hasImdb = imdbId && imdbId.startsWith('tt');
 
   switch (serverId) {
-    case 'vidsrc': {
-      // Server 1 (VidSrc) — Supports IMDb (tt...) & TMDb IDs
-      const targetId = hasImdb ? imdbId : (finalTmdbId || numericId);
+    case 'vidsrc':
+      // vidsrc.sbs — 4K server link API
+      const vidsrcId = finalTmdbId || numericId;
       return isTV
-        ? `https://vidsrc.to/embed/tv/${targetId}/${season}/${episode}`
-        : `https://vidsrc.to/embed/movie/${targetId}`;
-    }
-
-    case 'embed2': {
-      // Server 2 (2Embed)
-      const embed2Id = isTmdb ? numericId : (hasImdb ? imdbId : (finalTmdbId || numericId));
+        ? `https://vidsrc.sbs/embed/tv/${vidsrcId}/${season}/${episode}?server=4k&autoplay=1&autoPlay=true`
+        : `https://vidsrc.sbs/embed/movie/${vidsrcId}?server=4k&autoplay=1&autoPlay=true`;
+    case 'embed2':
+      // 2embed.cc — solid backup
       return isTV
-        ? `https://www.2embed.cc/embedtv/${embed2Id}&s=${season}&e=${episode}`
-        : `https://www.2embed.cc/embed/${embed2Id}`;
-    }
-
-    case 'autoembed': {
-      // Server 3 (AutoEmbed)
-      const autoId = isTmdb || !hasImdb ? (finalTmdbId || numericId) : imdbId;
-      const autoType = isTmdb || !hasImdb ? 'tmdb' : 'imdb';
+        ? `https://www.2embed.cc/embedtv/${isTmdb ? numericId : imdbId}&s=${season}&e=${episode}`
+        : `https://www.2embed.cc/embed/${isTmdb ? numericId : imdbId}`;
+    case 'autoembed':
       return isTV
-        ? `https://autoembed.co/tv/${autoType}/${autoId}-${season}-${episode}`
-        : `https://autoembed.co/movie/${autoType}/${autoId}`;
-    }
-
-    default: {
-      const targetId = hasImdb ? imdbId : (finalTmdbId || numericId);
+        ? `https://autoembed.co/tv/${isTmdb ? 'tmdb' : 'imdb'}/${numericId}-${season}-${episode}`
+        : `https://autoembed.co/movie/${isTmdb ? 'tmdb' : 'imdb'}/${numericId}`;
+    default:
+      const defaultId = finalTmdbId || numericId;
       return isTV
-        ? `https://vidsrc.to/embed/tv/${targetId}/${season}/${episode}`
-        : `https://vidsrc.to/embed/movie/${targetId}`;
-    }
+        ? `https://vidsrc.sbs/embed/tv/${defaultId}/${season}/${episode}?server=4k&autoplay=1&autoPlay=true`
+        : `https://vidsrc.sbs/embed/movie/${defaultId}?server=4k&autoplay=1&autoPlay=true`;
   }
 }
 
@@ -78,7 +66,7 @@ export default function MoviePageClient({ params }: MoviePageClientProps) {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeServer, setActiveServer] = useState<ServerId>('vidsrc');
+  const [activeServer, setActiveServer] = useState<ServerId>('embed2');
   const [playerKey, setPlayerKey] = useState(0);
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
@@ -91,7 +79,7 @@ export default function MoviePageClient({ params }: MoviePageClientProps) {
     setMovie(null);
     setIsLoading(true);
     setError(null);
-    setActiveServer('vidsrc');
+    setActiveServer('embed2');
     setSeason(1);
     setEpisode(1);
     setPlayerKey(k => k + 1);
@@ -298,7 +286,7 @@ export default function MoviePageClient({ params }: MoviePageClientProps) {
               <div className="flex items-center justify-between gap-3 mb-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 text-amber-700 dark:text-amber-300">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <AlertTriangle size={14} className="shrink-0" />
-                  <span>This server is taking a moment to load. Try <strong>Server 2</strong> or <strong>Server 3</strong> if it persists.</span>
+                  <span>This server is taking too long. Try <strong>Server 2</strong>, <strong>Server 3</strong>, or <strong>Server 4</strong> for faster loading.</span>
                 </div>
                 <button
                   onClick={() => setPlayerSlowWarning(false)}
@@ -316,7 +304,6 @@ export default function MoviePageClient({ params }: MoviePageClientProps) {
                 title={`Watch ${movie.Title} online free — ${activeServer}`}
                 allowFullScreen={true}
                 allow="autoplay; fullscreen *; picture-in-picture *; encrypted-media; gyroscope; accelerometer; clipboard-write; xr-spatial-tracking; web-share"
-                referrerPolicy="origin"
                 src={embedUrl}
                 width="100%"
                 height="100%"
