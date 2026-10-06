@@ -15,17 +15,19 @@ interface MoviePageClientProps {
 }
 
 const SERVERS = [
-  { id: 'vidsrc', label: 'Server 1 ⚡' },
-  { id: 'embed2', label: 'Server 2' },
-  { id: 'autoembed', label: 'Server 3' },
+  { id: 'vidsrc', label: 'Server 1 (VidSrc) ⚡' },
+  { id: 'vidlink', label: 'Server 2 (VidLink)' },
+  { id: 'embed2', label: 'Server 3 (2Embed)' },
+  { id: 'autoembed', label: 'Server 4 (AutoEmbed)' },
+  { id: 'multiembed', label: 'Server 5 (MultiEmbed)' },
 ] as const;
 
 type ServerId = typeof SERVERS[number]['id'];
 
 function buildEmbedUrl(serverId: ServerId, imdbId: string, tmdbId: string | undefined, type: string, season: number, episode: number): string {
   const isTV = type === 'series' || type === 'tv';
-  let numericId = imdbId;
   const isTmdb = imdbId.startsWith('tmdb-');
+  let numericId = imdbId;
   
   if (isTmdb) {
     const parts = imdbId.split('-');
@@ -33,28 +35,58 @@ function buildEmbedUrl(serverId: ServerId, imdbId: string, tmdbId: string | unde
   }
 
   const finalTmdbId = tmdbId || (isTmdb ? numericId : '');
+  const hasImdb = imdbId && imdbId.startsWith('tt');
 
   switch (serverId) {
     case 'vidsrc':
-      // vidsrc.sbs — 4K server link API
-      const vidsrcId = finalTmdbId || numericId;
+      // vidsrc.me — active & reliable player supporting both IMDb and TMDb
+      if (hasImdb) {
+        return isTV
+          ? `https://vidsrc.me/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
+          : `https://vidsrc.me/embed/movie?imdb=${imdbId}`;
+      }
       return isTV
-        ? `https://vidsrc.sbs/embed/tv/${vidsrcId}/${season}/${episode}?server=4k&autoplay=1&autoPlay=true`
-        : `https://vidsrc.sbs/embed/movie/${vidsrcId}?server=4k&autoplay=1&autoPlay=true`;
+        ? `https://vidsrc.me/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}`
+        : `https://vidsrc.me/embed/movie?tmdb=${finalTmdbId || numericId}`;
+
+    case 'vidlink':
+      // vidlink.pro — fast multi-quality stream
+      return isTV
+        ? `https://vidlink.pro/tv/${finalTmdbId || numericId}/${season}/${episode}`
+        : `https://vidlink.pro/movie/${finalTmdbId || numericId}`;
+
     case 'embed2':
-      // 2embed.cc — solid backup
+      // 2embed.cc — backup server
       return isTV
         ? `https://www.2embed.cc/embedtv/${isTmdb ? numericId : imdbId}&s=${season}&e=${episode}`
         : `https://www.2embed.cc/embed/${isTmdb ? numericId : imdbId}`;
+
     case 'autoembed':
+      // autoembed.co
       return isTV
         ? `https://autoembed.co/tv/${isTmdb ? 'tmdb' : 'imdb'}/${numericId}-${season}-${episode}`
         : `https://autoembed.co/movie/${isTmdb ? 'tmdb' : 'imdb'}/${numericId}`;
-    default:
-      const defaultId = finalTmdbId || numericId;
+
+    case 'multiembed':
+      // multiembed.mov
+      if (isTmdb || !hasImdb) {
+        return isTV
+          ? `https://multiembed.mov/?video_id=${finalTmdbId || numericId}&tmdb=1&s=${season}&e=${episode}`
+          : `https://multiembed.mov/?video_id=${finalTmdbId || numericId}&tmdb=1`;
+      }
       return isTV
-        ? `https://vidsrc.sbs/embed/tv/${defaultId}/${season}/${episode}?server=4k&autoplay=1&autoPlay=true`
-        : `https://vidsrc.sbs/embed/movie/${defaultId}?server=4k&autoplay=1&autoPlay=true`;
+        ? `https://multiembed.mov/?video_id=${imdbId}&s=${season}&e=${episode}`
+        : `https://multiembed.mov/?video_id=${imdbId}`;
+
+    default:
+      if (hasImdb) {
+        return isTV
+          ? `https://vidsrc.me/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
+          : `https://vidsrc.me/embed/movie?imdb=${imdbId}`;
+      }
+      return isTV
+        ? `https://vidsrc.me/embed/tv?tmdb=${finalTmdbId || numericId}&season=${season}&episode=${episode}`
+        : `https://vidsrc.me/embed/movie?tmdb=${finalTmdbId || numericId}`;
   }
 }
 
@@ -66,7 +98,7 @@ export default function MoviePageClient({ params }: MoviePageClientProps) {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeServer, setActiveServer] = useState<ServerId>('embed2');
+  const [activeServer, setActiveServer] = useState<ServerId>('vidsrc');
   const [playerKey, setPlayerKey] = useState(0);
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
@@ -79,7 +111,7 @@ export default function MoviePageClient({ params }: MoviePageClientProps) {
     setMovie(null);
     setIsLoading(true);
     setError(null);
-    setActiveServer('embed2');
+    setActiveServer('vidsrc');
     setSeason(1);
     setEpisode(1);
     setPlayerKey(k => k + 1);
@@ -286,7 +318,7 @@ export default function MoviePageClient({ params }: MoviePageClientProps) {
               <div className="flex items-center justify-between gap-3 mb-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 text-amber-700 dark:text-amber-300">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <AlertTriangle size={14} className="shrink-0" />
-                  <span>This server is taking too long. Try <strong>Server 2</strong>, <strong>Server 3</strong>, or <strong>Server 4</strong> for faster loading.</span>
+                  <span>This server is taking a moment to load. Try <strong>Server 2 (VidLink)</strong> or other servers above if it persists.</span>
                 </div>
                 <button
                   onClick={() => setPlayerSlowWarning(false)}
